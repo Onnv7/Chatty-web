@@ -12,15 +12,14 @@ export const registerSchema = z
       .trim()
       .min(1, { message: 'Please fill in this field' }),
     email: z.string().trim().min(1, { message: 'Please fill in this field' }),
-    token: z.string().trim().min(1, { message: 'Please fill in this field' }),
     password: z
       .string()
       .trim()
-      .min(1, { message: 'Password at least 6 characters' }),
+      .min(6, { message: 'Password at least 6 characters' }),
     confirmPassword: z
       .string()
       .trim()
-      .min(1, { message: 'Password at least 6 characters' }),
+      .min(6, { message: 'Password at least 6 characters' }),
     birthDate: z
       .date({ message: 'Please choose your birth date' })
       .transform((date) => date.toISOString().split('T')[0]),

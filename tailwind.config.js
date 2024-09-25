@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+
+export default ({
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -24,13 +25,16 @@ export default {
         20: "2rem",
       },
       colors: {
+        "primary-3": "#22d3ee",
         "primary-4": "#22d3ee",
         "primary-5": "#06B6D4"
+      },
+      boxShadow: {
       }
     },
   },
   plugins: [
     require('tailwind-children'),
   ],
-}
+})
 

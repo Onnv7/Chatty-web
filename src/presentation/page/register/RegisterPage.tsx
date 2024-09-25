@@ -4,30 +4,34 @@ import APP_ICON from '@icon/app_icon.svg';
 import RegisterInput from './components/RegisterInput';
 import { useNavigate } from 'react-router-dom';
 import { AppRouter } from '../../../common/config/router.config';
-import {
-  DatePicker,
-  DesktopDatePicker,
-  LocalizationProvider,
-} from '@mui/x-date-pickers-pro';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers-pro';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { FormControlLabel, Radio, RadioGroup } from '@mui/material';
 import { Gender } from '../../../common/constant/enum';
 import { Controller, useForm } from 'react-hook-form';
-import { RegisterAccountEntity } from '../../../domain/entity/register.usecase';
+import { RegisterAccountEntity } from '../../../domain/entity/register.entity';
 import dayjs from 'dayjs';
-import { formatDate } from '../../../common/util/date.util';
-import { registerSchema } from '../../../common/zod/register.zod';
+import { formatYMD } from '../../../common/util/date.util';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { registerSchema } from '../../../common/zod/register.zod';
+import { registerAccount } from '../../../domain/usecase/register.usecase';
+import { handleException } from '../../../common/exception/api.exeption';
+import { toastNotification } from '../../../common/util/notification.util';
+
 function RegisterPage() {
   const navigate = useNavigate();
   const form = useForm<RegisterAccountEntity>({
-    // resolver: zodResolver(registerSchema),
+    resolver: zodResolver(registerSchema),
   });
   const { register, handleSubmit, formState } = form;
   const { errors } = formState;
-  function onSubmitForm(data: RegisterAccountEntity) {
-    console.log(data);
-    console.log(formatDate(data.birthDate));
+  async function onSubmitForm(data: RegisterAccountEntity) {
+    try {
+      await registerAccount(data);
+      toastNotification({ msg: 'Account registration successful' });
+    } catch (err) {
+      handleException(err);
+    }
   }
 
   return (
@@ -94,7 +98,6 @@ function RegisterPage() {
                       }}
                       value={field.value ? dayjs(field.value) : null}
                       onChange={(date) => {
-                        console.log(errors.birthDate);
                         return field.onChange(date?.toDate());
                       }}
                     />

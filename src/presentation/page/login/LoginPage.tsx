@@ -5,9 +5,33 @@ import LoginInput from './components/LoginInput';
 import GOOGLE_ICON from '@icon/google_icon.svg';
 import { useNavigate } from 'react-router-dom';
 import { AppRouter } from '../../../common/config/router.config';
+import { useForm } from 'react-hook-form';
+import { LoginAccountEntity } from '../../../domain/entity/login.entity';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema } from '../../../common/zod/login.zod';
+import { loginAccount } from '../../../domain/usecase/login.usecase';
+import { toastNotification } from '../../../common/util/notification.util';
+import { handleException } from '../../../common/exception/api.exeption';
+import { useCallApi } from '../../../common/hook/useCallApi';
+import { useAuthContext } from '../../../common/context/auth.context';
 
 function LoginPage() {
+  const { authDispatch, userId } = useAuthContext();
   const navigate = useNavigate();
+  const loginApi = useCallApi();
+  const form = useForm<LoginAccountEntity>({
+    resolver: zodResolver(loginSchema),
+  });
+  const { register, handleSubmit, formState } = form;
+  const { errors } = formState;
+  async function onSubmit(formData: LoginAccountEntity) {
+    loginApi.callApi(async () => {
+      const data = await loginAccount(formData);
+      authDispatch({ type: 'LOGIN_SUCCESS', payload: data.userId });
+      toastNotification({ msg: 'Login successfully' });
+      navigate(AppRouter.conversation.route);
+    });
+  }
   return (
     <div className="flex h-[100vh] w-[100vw] items-center justify-center bg-login-background bg-cover bg-center bg-no-repeat">
       <div className="absolute inset-0 bg-login-background bg-cover bg-center bg-no-repeat blur-md" />
@@ -20,17 +44,21 @@ function LoginPage() {
             in Touch with Friends!
           </p>
         </div>
-        <form action="" className="my-4">
+        <form action="" className="my-4" onSubmit={handleSubmit(onSubmit)}>
           <LoginInput
+            register={register('username')}
             iconPath={EMAIL_ICON}
             placeholder="Email"
             className="my-2"
+            error={errors.username?.message}
           />
           <LoginInput
+            register={register('password')}
             iconPath={PASSWORD_ICON}
             placeholder="Password"
             type="password"
             className="my-2"
+            error={errors.password?.message}
           />{' '}
           <div className="flex items-center justify-end">
             <p className="cursor-pointer text-[0.9rem]">Forgot password?</p>
@@ -38,7 +66,6 @@ function LoginPage() {
           <button
             type="submit"
             className="mb-2 mt-4 h-[2.6rem] w-full transform rounded-[0.8rem] bg-black text-12 text-white shadow-[0_10px_10px_-10px_rgba(0,0,0,0.9)] transition-transform hover:scale-[1.03] active:scale-95"
-            onClick={() => navigate(AppRouter.dashboard.route)}
           >
             Get started
           </button>
