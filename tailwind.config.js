@@ -10,6 +10,7 @@ export default ({
       backgroundImage: {
         'login-background': "url('src/assets/image/login_background_image.png')",
         'register-background': "url('src/assets/image/register_background_image.png')",
+        'not-found-data-background': "url('src/assets/image/not_found_image.gif')",
       },
       fontWeight: {
         5: 500,

@@ -44,13 +44,11 @@ function MenuItemComponent({
         className={`${isOpenSideBar ? '' : 'size-[2rem]'} flex cursor-pointer items-center gap-2 font-5 ${itemSelected ? 'bg-[#eafafa]' : ''} rounded-md p-1`}
         onClick={() => {
           setNavItemSelected(itemIndex);
-          console.log('🚀 ~ navigateTo:', navigateTo);
           setIsOpenSubList((prev) => !prev);
           if (itemOnClick) {
             itemOnClick();
           }
           if (navigateTo) {
-            console.log('🚀 ~ navigateTo:', navigateTo);
             navigate(navigateTo);
           }
         }}
@@ -77,6 +75,7 @@ function MenuItemComponent({
                 subIndexSelected === subIndex && itemSelected;
               return (
                 <li
+                  key={subIndex}
                   className={`cursor-pointer rounded-xl px-2 py-1 hover:bg-cyan-100 ${isSubIndexSelected ? 'text-primary-4' : ''}`}
                   onClick={() => {
                     setSubIndexSelected(subIndex);
@@ -105,6 +104,7 @@ function MenuItemComponent({
               subIndexSelected === subIndex && itemSelected;
             return (
               <div
+                key={subIndex}
                 className={`${isOpenSideBar ? '' : 'size-[2rem]'} flex cursor-pointer items-center gap-2 font-5 ${isSubIndexSelected ? '' : ''} $ rounded-md p-1 transition-all`}
                 onClick={() => {
                   setSubIndexSelected(subIndex);

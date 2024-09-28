@@ -13,7 +13,7 @@ import AppLayout from './presentation/layout/AppLayout/AppLayout';
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route>
-      <Route path="/" element={<AppLayout />}>
+      <Route path="" element={<AppLayout />}>
         <Route
           path={AppRouter.conversation.route}
           element={AppRouter.conversation.page}

@@ -67,11 +67,12 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
     {
       name: 'Logout',
       icon: LOGOUT_ICON,
+      iconSelected: LOGOUT_ICON,
       onClick: () => {
         authDispatch({ type: 'LOGOUT' });
         toastNotification({ msg: 'Logout successful' });
       },
-      navigateTo: AppRouter.friends.route,
+      navigateTo: AppRouter.login.route,
     },
   ];
   const [isOpen, setIsOpen] = useState(true);
@@ -119,6 +120,7 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
           if (index < 3)
             return (
               <MenuItemComponent
+                key={index}
                 name={item.name}
                 iconSelected={item.iconSelected}
                 icon={item.icon}
@@ -139,6 +141,7 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
           if (index >= 3)
             return (
               <MenuItemComponent
+                key={index}
                 name={item.name}
                 iconSelected={item.iconSelected}
                 icon={item.icon}

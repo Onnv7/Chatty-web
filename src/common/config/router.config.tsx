@@ -7,7 +7,7 @@ import RegisterPage from '../../presentation/page/register/RegisterPage';
 export const AppRouter = {
   login: {
     page: <LoginPage />,
-    route: '/',
+    route: '/login',
   },
   register: {
     page: <RegisterPage />,

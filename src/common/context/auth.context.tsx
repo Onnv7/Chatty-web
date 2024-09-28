@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useReducer } from 'react';
-import authRepository from '../../data/repository/auth';
 import { AuthState, AuthAction, AuthReducer } from './auth.reducer';
+import { authRepository } from '../../data/repository';
 
 let userData = null;
 if (localStorage.getItem('user') !== 'undefined') {

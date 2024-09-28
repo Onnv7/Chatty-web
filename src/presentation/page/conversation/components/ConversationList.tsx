@@ -1,44 +1,73 @@
 import SEARCH_ICON from '@icon/search_icon.svg';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatDateConversation } from '../../../../common/util/date.util';
+import { useAuthContext } from '../../../../common/context/auth.context';
+import { useCallApi } from '../../../../common/hook/useCallApi';
+import { PageEntity } from '../../../../domain/entity/common.entity';
+import { conversationRepository } from '../../../../data/repository';
+import { ConversationEntity } from '../../../../domain/entity/conversation.entity';
+import { getConversationPage } from '../../../../domain/usecase/conversation.usecase';
+import { useSearchParams } from 'react-router-dom';
+import {
+  conversationSelector,
+  useConversationDispatch,
+  useConversationSelector,
+} from '../redux/conversation.store';
+import {
+  getConversationPageThunk,
+  getNextConversationPageThunk,
+  setConversationSelected,
+} from '../redux/conversation.slice';
 
-const userId = 1;
 const conversationFilterType = ['All', 'Groups'];
-const conversationList = [
-  {
-    imageUrl:
-      'https://editorial.uefa.com/resources/027c-16d30c80a3e5-8717973e3fb0-1000/portugal_v_france_-_uefa_euro_2020_group_f.jpeg',
-    name: 'Ronaldo',
-    lastMessage: 'Helloword',
-    senderId: 1,
-    lastSendAt: new Date(),
-    seen: true,
-  },
-  {
-    imageUrl:
-      'https://editorial.uefa.com/resources/027c-16d30c80a3e5-8717973e3fb0-1000/portugal_v_france_-_uefa_euro_2020_group_f.jpeg',
-    name: 'Ronaldo',
-    lastMessage: 'Helloword',
-    senderId: 2,
-    lastSendAt: new Date('2020-12-12'),
-    seen: false,
-  },
-  {
-    imageUrl:
-      'https://editorial.uefa.com/resources/027c-16d30c80a3e5-8717973e3fb0-1000/portugal_v_france_-_uefa_euro_2020_group_f.jpeg',
-    name: 'Ronaldo',
-    lastMessage: 'Helloword',
-    senderId: 2,
-    lastSendAt: new Date('2024-05-12'),
-    seen: false,
-  },
-];
 
 function ConversationList() {
+  const { userId } = useAuthContext();
+  const conversationDispatch = useConversationDispatch();
+  const conversationPayload = useConversationSelector(conversationSelector);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversationType, setConversationType] = useState(0);
+  const conversationScrollRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await conversationDispatch(getConversationPageThunk({ userId: userId! }));
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const conversation = conversationPayload.conversationSelected;
+    if (conversation?.id !== undefined) {
+      setSearchParams({
+        id: conversation.id,
+      });
+    }
+  }, [conversationPayload.conversationSelected]);
+
+  async function handleScroll() {
+    const pageEntity = conversationPayload.pageEntity;
+    if (pageEntity.currentPage < pageEntity.totalPage!) {
+      await conversationDispatch(
+        getNextConversationPageThunk({ userId: userId! }),
+      );
+    }
+  }
+
+  useEffect(() => {
+    const element = conversationScrollRef.current;
+    if (element) {
+      element.addEventListener('scroll', handleScroll);
+    }
+    return () => {
+      if (element) {
+        element.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [conversationPayload.pageEntity]);
 
   return (
-    <div className="size-full rounded-[0.8rem] bg-white px-4 py-2 shadow-md">
+    <div className="flex size-full flex-col rounded-[0.8rem] bg-white px-4 py-2 shadow-md">
       <section>
         <h3 className="text-16 font-7">Message</h3>
       </section>
@@ -72,28 +101,43 @@ function ConversationList() {
           })}
         </div>
       </section>
-      <section>
-        {conversationList.map((conv) => {
+      <section className="grow overflow-y-auto" ref={conversationScrollRef}>
+        {conversationPayload.conversationList.map((conv, index) => {
           const imSender = userId === conv.senderId;
           return (
-            <div className="my-4 flex cursor-pointer items-center gap-2">
-              <span className="relative">
+            <div
+              key={conv.id}
+              className={`my-4 flex h-[5rem] cursor-pointer items-center gap-2 ${conversationPayload.conversationSelected?.id === conv.id ? 'bg-gray-200' : ''} rounded-xl px-4`}
+              onClick={() => {
+                conversationDispatch(
+                  setConversationSelected({
+                    id: conv.id,
+                    imageUrl: conv.imageUrl,
+                    roomName: conv.name,
+                  }),
+                );
+                setSearchParams({ id: conv.id });
+              }}
+            >
+              <div className="relative size-[3rem]">
                 <img
                   src={conv.imageUrl}
                   alt=""
-                  className="size-[3rem] rounded-full object-cover"
+                  className="size-full rounded-full object-cover"
                 />
                 <div className="absolute right-[0.2rem] top-[78%] size-[0.8rem] rounded-full border-[2px] border-white bg-green-500"></div>
-              </span>
+              </div>
               <div className="flex grow flex-col">
                 <div className="flex justify-between">
-                  <h3 className="text-12 font-5">{conv.name}</h3>
+                  <h3 className="text-10 grow font-5">{conv.name}</h3>
                   <p className="text-gray-400">
-                    {formatDateConversation(conv.lastSendAt)}
+                    {formatDateConversation(new Date(conv.lastSendAt))}
                   </p>
                 </div>
-                <div className="flex">
-                  <h3 className={`${imSender ? 'text-gray-500' : 'font-5'}`}>
+                <div className="grow overflow-hidden text-ellipsis">
+                  <h3
+                    className={`${imSender ? 'text-gray-500' : 'font-5'} max-w-[200px] truncate text-9`}
+                  >
                     {imSender ? 'You: ' + conv.lastMessage : conv.lastMessage}
                   </h3>
                 </div>

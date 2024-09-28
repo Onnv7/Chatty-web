@@ -16,8 +16,9 @@ export const toastNotification = ({
   type = 'success',
   position = 'top-center',
 }: ToastNotificationType) => {
-  toast(msg, {
-    type,
-    position,
-  });
+  if (msg && msg.trim().length > 0)
+    toast(msg, {
+      type,
+      position,
+    });
 };

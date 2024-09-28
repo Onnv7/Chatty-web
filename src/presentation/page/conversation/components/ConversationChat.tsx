@@ -6,59 +6,98 @@ import MEDIA_ICON from '@icon/media_icon.svg';
 import LOCATION_ICON from '@icon/location_icon.svg';
 import CLOSE_ICON from '@icon/X_ICON.svg';
 import { conversationMessageList } from '../../../../common/data/example.data';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import EmojiPicker, { Emoji, EmojiClickData } from 'emoji-picker-react';
 import { useControlPanel } from '../../../../common/hook/useControlPanel';
-
-const userId = 1;
+import { useSearchParams } from 'react-router-dom';
+import { useCallApi } from '../../../../common/hook/useCallApi';
+import {
+  getMessagePage,
+  handleChangeIcon,
+  handleChangeMedia,
+  handleChangeMessage,
+  handleSendMessage,
+} from '../../../../domain/usecase/conversation.usecase';
+import { PageEntity } from '../../../../domain/entity/common.entity';
+import { useAuthContext } from '../../../../common/context/auth.context';
+import {
+  MessageEntity,
+  UpdateNewMessageEntity,
+} from '../../../../domain/entity/conversation.entity';
+import {
+  conversationSelector,
+  useConversationDispatch,
+  useConversationSelector,
+} from '../redux/conversation.store';
+import { updateNewConversation } from '../redux/conversation.slice';
 
 function ConversationChat() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const conversationPayload = useConversationSelector(conversationSelector);
+  const conversationDispatch = useConversationDispatch();
+  const conversationId = searchParams.get('id') || '';
+  const { userId } = useAuthContext();
   const [textMessage, setTextMessage] = useState('');
+  const conversationScrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [mediaSelected, setMediaSelected] = useState<string[]>([]);
+  const [conversationMessageList, setConversationMessageList] = useState<
+    MessageEntity[]
+  >([]);
+  const [pageEntity, setPageEntity] = useState<PageEntity>({
+    pageSize: 3,
+    currentPage: 1,
+  });
+  const messageApi = useCallApi();
 
-  const [openEmoji, setOpenEmoji] = useState(false);
   const { isVisible, elementRef, panelRef, handleOpen } = useControlPanel({
     hiddenWhenClickPanel: false,
   });
-  const handleChangeMedia = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-
-    if (files) {
-      const fileArray = Array.from(files);
-      const imageUrls: string[] = [];
-
-      fileArray.forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            imageUrls.push(e.target.result as string);
-            if (imageUrls.length === fileArray.length) {
-              setMediaSelected(imageUrls);
-            }
-          }
-        };
-        reader.readAsDataURL(file); // Đọc file dưới dạng URL
-      });
+  async function handleSendMessageClick() {
+    if (textMessage.trim().length === 0) {
+      return;
     }
-  };
-  const handleChangeMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setTextMessage(e.target.value);
-    e.target.style.height = 'auto';
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 6 * 24)}px`;
-  };
-  const handleChangeIcon = (emoji: EmojiClickData, e: MouseEvent) => {
-    setTextMessage((prev) => prev + emoji.emoji);
+    const msgList = await handleSendMessage(
+      textMessage,
+      userId!,
+      conversationMessageList,
+      undefined,
+      conversationId,
+    );
+    setTextMessage('');
+    setConversationMessageList([...msgList]);
+    conversationDispatch(
+      updateNewConversation({
+        conversationId: conversationId,
+        senderId: userId!,
+        createdAt: new Date().toISOString(),
+        content: textMessage,
+      }),
+    );
+  }
 
-    if (textInputRef.current) {
-      textInputRef.current.style.height = 'auto';
-      textInputRef.current.style.height = `${Math.min(textInputRef.current.scrollHeight, 6 * 24)}px`;
+  useEffect(() => {
+    messageApi.callApi(async () => {
+      const data = await getMessagePage(
+        pageEntity.currentPage,
+        pageEntity.pageSize,
+        conversationId!,
+      );
+      setConversationMessageList(data.messageList);
+    });
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (conversationScrollRef.current) {
+      conversationScrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  };
-  const handleOpenMedia = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click(); // Mở hộp thoại chọn file
+  }, [conversationMessageList]);
+
+  const handleSelectMedia = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const imageUrl = handleChangeMedia(event);
+    if (imageUrl) {
+      setMediaSelected(imageUrl);
     }
   };
 
@@ -66,14 +105,14 @@ function ConversationChat() {
     <div className="relative flex size-full flex-col rounded-[0.8rem] bg-white px-4 py-2 shadow-md">
       <section className="flex items-center gap-4">
         <img
-          src={
-            'https://editorial.uefa.com/resources/027c-16d30c80a3e5-8717973e3fb0-1000/portugal_v_france_-_uefa_euro_2020_group_f.jpeg'
-          }
+          src={conversationPayload.conversationSelected?.imageUrl}
           alt=""
           className="size-[3.4rem] rounded-full object-cover"
         />
         <div className="grow">
-          <h3 className="text-14 font-5">Ronaldo</h3>
+          <h3 className="text-14 font-5">
+            {conversationPayload.conversationSelected?.roomName}
+          </h3>
         </div>
         <div className="flex gap-4">
           <img
@@ -90,19 +129,20 @@ function ConversationChat() {
       </section>
       <hr className="my-2" />
       <section className="grow overflow-y-scroll">
-        {conversationMessageList.map((message) => {
+        {conversationMessageList.map((message, index) => {
           const imSender = message.senderId === userId;
+
           const messageChain = message.messageChain;
           const lastIndex = messageChain.length - 1;
           const haveOne = messageChain.length === 1 ? true : false;
           return (
-            <div className="my-2">
-              {imSender
+            <div key={index} className="my-2">
+              {!imSender
                 ? messageChain.map((msg, index) => {
                     return (
-                      <div className="flex gap-2">
+                      <div key={index} className="flex items-center gap-2">
                         <img
-                          src={message.imageUrl}
+                          src={message.avatarUrl}
                           alt=""
                           className={`${haveOne || index === lastIndex ? 'visible' : 'invisible'} size-[1.8rem] rounded-full object-cover`}
                         />
@@ -116,9 +156,12 @@ function ConversationChat() {
                   })
                 : messageChain.map((msg, index) => {
                     return (
-                      <div className="flex flex-row-reverse gap-2">
+                      <div
+                        key={index}
+                        className="flex flex-row-reverse items-center gap-2"
+                      >
                         <img
-                          src={message.imageUrl}
+                          src={message.avatarUrl}
                           alt=""
                           className={`${haveOne || index === lastIndex ? 'visible' : 'invisible'} size-[1.8rem] rounded-full object-cover`}
                         />
@@ -133,6 +176,7 @@ function ConversationChat() {
             </div>
           );
         })}
+        <div ref={conversationScrollRef}></div>
       </section>
       <section className="flex w-full items-center">
         <div className="flex grow flex-col rounded-[0.8rem] bg-[#f1ecec]">
@@ -167,7 +211,16 @@ function ConversationChat() {
               placeholder="Type a message..."
               className="grow resize-none overflow-y-auto bg-transparent outline-none"
               value={textMessage}
-              onChange={handleChangeMessage}
+              onChange={(e) => {
+                setTextMessage(e.target.value);
+                handleChangeMessage(e);
+              }}
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  await handleSendMessageClick();
+                }
+              }}
               rows={1}
               style={{ maxHeight: '168px' }}
             />
@@ -177,14 +230,18 @@ function ConversationChat() {
                   src={MEDIA_ICON}
                   alt=""
                   className="size-[1.6rem] cursor-pointer"
-                  onClick={handleOpenMedia}
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.click();
+                    }
+                  }}
                 />
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,video/*"
                   multiple
-                  onChange={handleChangeMedia}
+                  onChange={handleSelectMedia}
                   style={{ display: 'none' }}
                 />
               </div>
@@ -204,7 +261,10 @@ function ConversationChat() {
                     <EmojiPicker
                       height={500}
                       width={400}
-                      onEmojiClick={handleChangeIcon}
+                      onEmojiClick={(emoji, e) => {
+                        setTextMessage((prev) => prev + emoji.emoji);
+                        handleChangeIcon(textInputRef);
+                      }}
                     />
                   </div>
                 )}
@@ -222,6 +282,9 @@ function ConversationChat() {
             src={SEND_ICON}
             alt=""
             className="my-2 size-[1.6rem] cursor-pointer"
+            onClick={async () => {
+              await handleSendMessageClick();
+            }}
           />
         </div>
       </section>

@@ -1,5 +1,5 @@
 import { httpAuth } from '../../common/config/http.config';
-import authRepository from '../../data/repository/auth';
+import { authRepository } from '../../data/repository';
 import { LoginAccountEntity } from '../entity/login.entity';
 
 export async function loginAccount(entity: LoginAccountEntity) {

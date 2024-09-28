@@ -1,18 +1,22 @@
 import ADD_FRIEND_ICON from '@icon/add_friend_icon.svg';
 import SEND_ADD_FRIEND_ICON from '@icon/send_add_friend_icon.svg';
 import MESSAGE_ICON from '@icon/message_icon.svg';
-
-function FriendListItemComponent() {
+import { FriendSearchEntity } from '../../../../domain/entity/friend.entity';
+import { Gender } from '../../../../common/constant/enum';
+type FriendListItemComponentProps = {
+  data: FriendSearchEntity;
+};
+function FriendListItemComponent({ data }: FriendListItemComponentProps) {
   return (
-    <div className="mx-auto flex w-[60%] items-center rounded-[3rem] border-[1px] px-2 py-2 shadow-[0px_0px_5px_-1px_rgba(0,0,0,0.3)]">
+    <div
+      className={`pi mx-auto flex w-[60%] items-center border-b-[1px] px-2 py-2 ${data.gender === Gender.FEMALE ? 'shadow-[0px_3px_5px_-0px_rgba(255,2,246,0.3)]' : 'shadow-[0px_3px_5px_-0px_rgba(7,218,255,0.3)]'}`}
+    >
       <img
-        src={
-          'https://editorial.uefa.com/resources/027c-16d30c80a3e5-8717973e3fb0-1000/portugal_v_france_-_uefa_euro_2020_group_f.jpeg'
-        }
+        src={data.avatarUrl}
         alt=""
         className="mr-2 size-[3.2rem] rounded-full object-cover"
       />
-      <h3 className="mx-4 grow text-14 font-5">Name</h3>
+      <h3 className="mx-4 grow text-14 font-5">{data.fullName}</h3>
       <span className="mr-2">
         <img
           src={MESSAGE_ICON}

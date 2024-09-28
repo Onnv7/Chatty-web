@@ -4,6 +4,7 @@ import {
   RegisterAccountRequest,
 } from '../model/request/auth.request';
 import { LoginAccountResponse } from '../model/response/auth.response';
+import { GetConversationPageResponse } from '../model/response/conversation.response';
 
 export class AuthAPI {
   constructor() {}
