@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     loadingData();
   }, [state.userId]);
+
   return (
     <AuthContext.Provider
       value={{ userId: state.userId, authDispatch: dispatch, isAuthenticated }}

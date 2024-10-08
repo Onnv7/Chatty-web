@@ -1,3 +1,5 @@
+import { ActiveStatus } from '../../common/constant/enum';
+
 export type ConversationEntity = {
   id: string;
   imageUrl: string;
@@ -5,15 +7,20 @@ export type ConversationEntity = {
   lastSendAt: string;
   name: string;
   senderId: number;
+  activeStatus: ActiveStatus;
+  lastActiveAt: Date;
+  friendId?: number;
 };
 
 export type MessageEntity = {
   messageChain: {
+    id?: string;
     content: string;
     createdAt: Date;
+    reactionList: string[];
+    reactedCount: number;
   }[];
   senderId: number;
-  avatarUrl: string;
 };
 
 export type ConversationSelectedEntity = {
@@ -30,4 +37,42 @@ export type UpdateNewMessageEntity = {
   senderId: number;
   createdAt: string;
   content: string;
+};
+
+export type ConversationInfoEntity = {
+  memberList: {
+    id: number;
+    name: string;
+    avatarUrl: string;
+  }[];
+};
+
+export interface SendNewMessageSocketData {
+  senderId: number;
+  conversationId: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface SendReactionSocketData {
+  senderId: number;
+  conversationId: string;
+  messageId: string;
+  reactionList: string[];
+  reactedCount: number;
+}
+
+export type UpdateNewActiveFriendEntity = {
+  activeStatus: ActiveStatus;
+  friendId: number;
+};
+
+export type ConversationSummaryEntity = {
+  name: string;
+  imageUrl: string;
+};
+
+export type ReactMessageEntity = {
+  reactionList: string[];
+  reactedCount: number;
 };

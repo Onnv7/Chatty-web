@@ -8,7 +8,7 @@ const ErrorMessageCode = {
 };
 export const handleException = (e: any) => {
   e = e as Error;
-  console.log('🚀 ~ handleException ~ e:', e.response?.data.error);
+  console.log('🚀 ~ handleException ~ e:', e, e.response?.data.error);
   if (e instanceof AxiosError) {
     const error: ErrorResponseEntity = e.response?.data.error;
     const msg =

@@ -73,4 +73,11 @@ export class FriendRepository {
     });
     return data;
   }
+
+  async getFriendProfileSummary(friendId: number) {
+    const data = await this.friendApi.getFriendProfileSummary(friendId);
+    return {
+      ...data,
+    };
+  }
 }

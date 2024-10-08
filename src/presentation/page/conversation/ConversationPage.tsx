@@ -7,7 +7,6 @@ import { useAuthContext } from '../../../common/context/auth.context';
 
 function ConversationPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchKey = searchParams.get('id');
   const { userId } = useAuthContext();
   // const dispatch = useAppDispatch();
 
@@ -17,11 +16,13 @@ function ConversationPage() {
 
   return (
     <Provider store={conversationStore}>
-      <div className="flex size-full gap-2">
-        <section className="basis-[20rem]">
+      <div className="relative flex size-full gap-2">
+        <section className="relative z-0 basis-[20rem]">
           <ConversationList />
         </section>
-        <section className="grow">{searchKey && <ConversationChat />}</section>
+        <section className="relative z-10 max-w-full grow">
+          <ConversationChat />
+        </section>
       </div>
     </Provider>
   );

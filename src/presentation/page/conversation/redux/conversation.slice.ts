@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
   ConversationEntity,
   ConversationSelectedEntity,
+  UpdateNewActiveFriendEntity,
   UpdateNewMessageEntity,
 } from '../../../../domain/entity/conversation.entity';
 import { conversationRepository } from '../../../../data/repository';
@@ -11,7 +12,8 @@ import { number } from 'zod';
 type ConversationReduxType = {
   pageEntity: PageEntity;
   conversationList: ConversationEntity[];
-  conversationSelected?: ConversationSelectedEntity;
+  conversationSelected: string | null;
+  reloadConversationList: boolean;
 };
 
 const initialState: ConversationReduxType = {
@@ -20,7 +22,8 @@ const initialState: ConversationReduxType = {
     pageSize: 10,
   },
   conversationList: [],
-  conversationSelected: undefined,
+  conversationSelected: null,
+  reloadConversationList: true,
 };
 export const getConversationPageThunk = createAsyncThunk(
   'conversation/get-conversation-page',
@@ -34,6 +37,7 @@ export const getConversationPageThunk = createAsyncThunk(
           state.pageEntity.pageSize,
           userId!,
         );
+
       return { totalPage, conversationList };
     } catch (error) {
       return thunkAPI.rejectWithValue('Loading failed');
@@ -67,10 +71,7 @@ const conversationSlice = createSlice({
   name: 'slice',
   initialState: initialState,
   reducers: {
-    setConversationSelected: (
-      state,
-      action: PayloadAction<ConversationSelectedEntity>,
-    ) => {
+    setConversationSelected: (state, action: PayloadAction<string | null>) => {
       state.conversationSelected = action.payload;
     },
     updateNewConversation: (
@@ -96,20 +97,37 @@ const conversationSlice = createSlice({
         );
       state.conversationList = conversationList;
     },
+    updateNewActiveFriend: (
+      state,
+      action: PayloadAction<UpdateNewActiveFriendEntity>,
+    ) => {
+      state.conversationList = [
+        ...state.conversationList.map((conv) => {
+          if (conv.friendId === action.payload.friendId) {
+            return {
+              ...conv,
+              activeStatus: action.payload.activeStatus,
+              lastActiveAt: new Date(),
+            };
+          }
+          return conv;
+        }),
+      ];
+    },
+    refreshCallConversationList: (state, action: PayloadAction<boolean>) => {
+      state.reloadConversationList = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(getConversationPageThunk.fulfilled, (state, action) => {
       const payload = action.payload;
       if (payload.conversationList.length > 0) {
         const firstConversation = payload.conversationList[0];
-        state.conversationSelected = {
-          id: firstConversation.id,
-          roomName: firstConversation.name,
-          imageUrl: firstConversation.imageUrl,
-          // lastMessage: firstConversation.lastMessage,
-          // lastSentAt: firstConversation.lastSendAt,
-          // senderId: firstConversation.senderId,
-        };
+        // state.conversationSelected = {
+        //   id: firstConversation.id,
+        //   roomName: firstConversation.name,
+        //   imageUrl: firstConversation.imageUrl,
+        // };
       }
       state.conversationList = payload.conversationList;
       state.pageEntity = {
@@ -133,6 +151,10 @@ const conversationSlice = createSlice({
     });
   },
 });
-export const { setConversationSelected, updateNewConversation } =
-  conversationSlice.actions;
+export const {
+  setConversationSelected,
+  updateNewConversation,
+  updateNewActiveFriend,
+  refreshCallConversationList,
+} = conversationSlice.actions;
 export default conversationSlice.reducer;

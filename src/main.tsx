@@ -8,10 +8,13 @@ import 'swiper/css';
 import 'swiper/css/free-mode';
 import 'swiper/css/navigation';
 import { AuthProvider } from './common/context/auth.context.tsx';
+import { BrowserRouter, RouterProvider } from 'react-router-dom';
 
 createRoot(document.getElementById('root')!).render(
-  <AuthProvider>
-    <App />
-    <ToastContainer />
-  </AuthProvider>,
+  <BrowserRouter>
+    <AuthProvider>
+      <App />
+      <ToastContainer />
+    </AuthProvider>
+  </BrowserRouter>,
 );

@@ -1,20 +1,25 @@
 import { RefObject } from 'react';
 import {
   conversationRepository,
+  friendRepository,
   messageRepository,
 } from '../../data/repository';
 import { PageEntity } from '../entity/common.entity';
-import { MessageEntity } from '../entity/conversation.entity';
+import {
+  MessageEntity,
+  SendNewMessageSocketData,
+  SendReactionSocketData,
+} from '../entity/conversation.entity';
 
-export async function getConversationPage(
-  page: number,
-  size: number,
-  userId: number,
-) {
-  const { totalPage, conversationList } =
-    await conversationRepository.getConversationPage(page, size, userId!);
-  return { totalPage, conversationList };
-}
+// export async function getConversationPage(
+//   page: number,
+//   size: number,
+//   userId: number,
+// ) {
+//   const { totalPage, conversationList } =
+//     await conversationRepository.getConversationPage(page, size, userId!);
+//   return { totalPage, conversationList };
+// }
 
 export async function getMessagePage(
   page: number,
@@ -60,41 +65,114 @@ export function handleChangeIcon(textInputRef: RefObject<HTMLTextAreaElement>) {
   }
 }
 
-export async function handleSendMessage(
+export async function handleSendMessageToRoom(
   content: string,
   userId: number,
-  conversationMessageList: MessageEntity[],
-  receiverId?: number,
-  conversationId?: string,
+  conversationId: string,
 ) {
-  if (conversationId)
-    await messageRepository.sendMessage(content, userId, conversationId);
-  else {
-    await messageRepository.sendMessage(content, userId, undefined, [
-      userId,
-      receiverId!,
-    ]);
-  }
-  const lastMessage =
-    conversationMessageList[conversationMessageList.length - 1];
-  if (lastMessage.senderId === userId!) {
-    lastMessage.messageChain.push({
-      content: content,
-      createdAt: new Date(),
-    });
-  } else {
-    conversationMessageList.push({
-      messageChain: [
-        {
-          content: content,
-          createdAt: new Date(),
-        },
-      ],
-      senderId: userId!,
-      avatarUrl:
-        'https://editorial.uefa.com/resources/027c-16d30c80a3e5-8717973e3fb0-1000/portugal_v_france_-_uefa_euro_2020_group_f.jpeg',
-    });
-  }
+  let msgId = await messageRepository.sendMessage(
+    content,
+    userId,
+    conversationId,
+  );
 
+  return {
+    content: content,
+    createdAt: new Date(),
+    id: msgId,
+  };
+}
+
+export async function handleSendMessageToFriend(
+  content: string,
+  userId: number,
+  receiverId: number,
+) {
+  return await messageRepository.sendMessage(content, userId, undefined, [
+    userId,
+    receiverId!,
+  ]);
+}
+
+export async function getConversation(conversationId: string) {
+  const data = await conversationRepository.getConversation(conversationId);
+  return data;
+}
+
+export function handleNewMessageInComing(
+  data: SendNewMessageSocketData,
+  conversationMessageList: MessageEntity[],
+  conversationId: string,
+  userId: number,
+) {
+  if (conversationId === data.conversationId) {
+    const lastMessage =
+      conversationMessageList[conversationMessageList.length - 1];
+    if (lastMessage.senderId === userId!) {
+      conversationMessageList.push({
+        messageChain: [
+          {
+            content: data.content,
+            createdAt: new Date(data.createdAt),
+            reactedCount: 0,
+            reactionList: [],
+          },
+        ],
+        senderId: data.senderId,
+      });
+    } else {
+      lastMessage.messageChain.push({
+        content: data.content,
+        createdAt: new Date(data.createdAt),
+        reactedCount: 0,
+        reactionList: [],
+      });
+    }
+  }
   return conversationMessageList;
+}
+
+export const checkIsAtBottom = (
+  scrollContainerRef: RefObject<HTMLDivElement>,
+): boolean => {
+  if (!scrollContainerRef.current) return false;
+  const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+
+  return scrollTop + clientHeight >= scrollHeight - 50;
+};
+
+export const getConversationId = async (friendId: number, userId: number) => {
+  return conversationRepository.getConversationIdByFriendId(friendId, userId);
+};
+
+export const getFriendProfileSummary = async (friendId: number) => {
+  return friendRepository.getFriendProfileSummary(friendId);
+};
+
+export async function reactMessage(
+  userId: number,
+  reaction: string,
+  messageId: string,
+) {
+  return await messageRepository.reactMessage(userId, reaction, messageId);
+}
+
+export function updateReactionMessage(
+  conversationMessageList: MessageEntity[],
+  data: { messageId: string; reactionList: string[]; reactedCount: number },
+) {
+  let found = false;
+  return conversationMessageList.map((message) => {
+    if (found) return message;
+    for (let i = 0; i < message.messageChain.length; i++) {
+      let msg = message.messageChain[i];
+      if (msg.id === data.messageId) {
+        msg.reactionList = data.reactionList;
+        msg.reactedCount = data.reactedCount;
+        found = true;
+        break;
+      }
+    }
+    return message;
+  });
 }

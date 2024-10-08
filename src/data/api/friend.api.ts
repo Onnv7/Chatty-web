@@ -5,6 +5,7 @@ import {
   SendInvitationRequest,
 } from '../model/request/friend.request';
 import {
+  GetFriendProfileSummary,
   GetInvitationResponse,
   SearchFriendResponse,
 } from '../model/response/friend.response';
@@ -51,6 +52,13 @@ export class FriendAPI {
   async processInvitation(body: ProcessInvitationRequest) {
     const responseData = (await http.put(`/friend/invitation/process`, body))
       .data;
+    return responseData.data;
+  }
+
+  async getFriendProfileSummary(
+    friendId: number,
+  ): Promise<GetFriendProfileSummary> {
+    const responseData = (await http.get(`/friend/${friendId}/profile`)).data;
     return responseData.data;
   }
 }

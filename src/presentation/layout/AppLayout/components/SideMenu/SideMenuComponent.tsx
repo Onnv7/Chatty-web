@@ -9,13 +9,15 @@ import CHAT_ICON_SELECTED from '@icon/chat_icon_cyan.svg';
 import FRIEND_ICON_SELECTED from '@icon/people_icon_cyan.svg';
 import SETTING_ICON_SELECTED from '@icon/setting_icon_cyan.svg';
 import LOGOUT_ICON from '@icon/logout_icon.svg';
-import LOGOUT_ICON_SELECTED from '@icon/logout_icon_cyan.svg';
-import { SetStateAction, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthContext } from '../../../../../common/context/auth.context';
 import { toastNotification } from '../../../../../common/util/notification.util';
 import { useNavigate } from 'react-router-dom';
 import { AppRouter } from '../../../../../common/config/router.config';
 import MenuItemComponent from './MenuItemComponent';
+import { useSocketContext } from '../../../../../common/context/socket.context';
+import { SocketNamespaces } from '../../../../../common/constant/socket.constant';
+import { emitHeartbeat } from '../../../../../domain/usecase/app.usecase';
 type SideMenuComponentProps = {
   className?: string;
 };
@@ -23,6 +25,11 @@ type SideMenuComponentProps = {
 function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
   const navigate = useNavigate();
   const { userId, authDispatch } = useAuthContext();
+  const { socket, disconnectSocket } = useSocketContext();
+  const [isOpen, setIsOpen] = useState(true);
+  const [navItemSelected, setNavItemSelected] = useState(0);
+  const conversationSocket = socket(SocketNamespaces.conversation);
+  // const userSocket = socket(SocketNamespaces.user);
   const itemNav = [
     {
       name: 'Home',
@@ -71,16 +78,25 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
       onClick: () => {
         authDispatch({ type: 'LOGOUT' });
         toastNotification({ msg: 'Logout successful' });
+        conversationSocket.disconnect();
       },
       navigateTo: AppRouter.login.route,
     },
   ];
-  const [isOpen, setIsOpen] = useState(true);
-  const [navItemSelected, setNavItemSelected] = useState(0);
-
+  const intervalRef = useRef<number | null>(null);
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
+  useEffect(() => {
+    const emitData = () => {
+      emitHeartbeat({ userId: userId! }, conversationSocket);
+    };
+    conversationSocket.emit('register', {
+      userId: userId,
+    });
+    intervalRef.current = setInterval(emitData, 30000);
+  }, [userId]);
+
   return (
     <div
       className={`${className} p-4 duration-300 ${isOpen ? 'w-[200px]' : 'w-[74px]'} flex flex-col border-r-[1px] border-gray-200 bg-white`}
@@ -96,7 +112,7 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
             style={{ transform: isOpen ? 'translateY(0)' : 'translateY(-8px)' }}
           />
           {isOpen && (
-            <h1 className="transition-opacity duration-300 text-14 font-7">
+            <h1 className="text-14 font-7 transition-opacity duration-300">
               Chatty
             </h1>
           )}

@@ -23,3 +23,8 @@ export type GetInvitationResponse = {
     gender: Gender;
   }[];
 };
+
+export type GetFriendProfileSummary = {
+  fullName: string;
+  avatarUrl: string;
+};

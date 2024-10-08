@@ -1,3 +1,7 @@
+import {
+  MessageEntity,
+  ReactMessageEntity,
+} from '../../domain/entity/conversation.entity';
 import { MessageApi } from '../api/message.api';
 import { SendMessageRequest } from '../model/request/message.request';
 
@@ -10,9 +14,10 @@ export class MessageRepository {
       size,
       conversationId,
     );
+
     return {
       totalPage: data.totalPage,
-      messageList: data.messageList,
+      messageList: (data.messageList as MessageEntity[]) ?? [],
     };
   }
 
@@ -33,7 +38,25 @@ export class MessageRepository {
           senderId: userId,
           memberIdList: memberIdList!,
         };
+    const data = await this.messageApi.sendMessage(body);
+    if (data) {
+      return data.id;
+    }
+  }
 
-    this.messageApi.sendMessage(body);
+  async reactMessage(
+    userId: number,
+    reaction: string,
+    messageId: string,
+  ): Promise<ReactMessageEntity> {
+    const data = await this.messageApi.reactMessage({
+      senderId: userId,
+      reaction,
+      messageId,
+    });
+    return {
+      reactionList: data.reactionList,
+      reactedCount: data.reactedCount,
+    };
   }
 }

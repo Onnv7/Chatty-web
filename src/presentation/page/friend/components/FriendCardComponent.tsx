@@ -12,6 +12,9 @@ import {
 } from '../../../../domain/usecase/friend.usecase';
 import { useCallApi } from '../../../../common/hook/useCallApi';
 import PopupComponent from '../../../components/PopupComponent';
+import MessagePopup from '../../../components/message-popup/MessagePopup';
+import { AppRouter } from '../../../../common/config/router.config';
+import { useNavigate } from 'react-router-dom';
 
 type FriendCardComponentProps = {
   data: FriendSearchEntity;
@@ -21,6 +24,7 @@ function FriendCardComponent({ data }: FriendCardComponentProps) {
   const [relationship, setRelationship] = useState(data.relationship);
   const { userId } = useAuthContext();
   const sendInvitationApi = useCallApi();
+  const navigate = useNavigate();
   const processInvitationApi = useCallApi();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
@@ -53,7 +57,7 @@ function FriendCardComponent({ data }: FriendCardComponentProps) {
         action === InvitationAction.ACCEPT
           ? Relationship.FRIEND
           : Relationship.NONE;
-     
+
       setRelationship(newRelationship);
     });
   }
@@ -69,7 +73,12 @@ function FriendCardComponent({ data }: FriendCardComponentProps) {
       />
       <h3 className="my-4 text-12 font-5">{data.fullName}</h3>
       <div className="mx-auto flex w-[10rem] gap-2">
-        <button className="grow basis-[5rem] select-none rounded-[1.2rem] border-[1.4px] border-primary-5 px-2 py-1 text-8 text-primary-5">
+        <button
+          className="grow basis-[5rem] select-none rounded-[1.2rem] border-[1.4px] border-primary-5 px-2 py-1 text-8 text-primary-5"
+          onClick={() =>
+            navigate(`${AppRouter.conversation.route}?friend=${data.profileId}`)
+          }
+        >
           Message
         </button>
         {relationship !== Relationship.FRIEND && (
@@ -113,6 +122,7 @@ function FriendCardComponent({ data }: FriendCardComponentProps) {
               ),
           }}
         />
+        {/* <MessagePopup friendId={0} /> */}
       </div>
     </span>
   );

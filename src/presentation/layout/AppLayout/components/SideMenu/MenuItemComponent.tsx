@@ -68,7 +68,7 @@ function MenuItemComponent({
         )}
       </div>
       {!isOpenSideBar && subList && isHovered && (
-        <div className="absolute left-[100%] top-[50%] w-fit -translate-y-[50%] pl-2">
+        <div className="absolute left-[100%] top-[50%] z-50 w-fit -translate-y-[50%] pl-2">
           <ul className="flex flex-col gap-2 rounded-2xl bg-white p-2 shadow-[0px_0px_20px_-5px_rgba(0,0,0,0.3)]">
             {subList.map((subItem, subIndex) => {
               const isSubIndexSelected =
@@ -117,18 +117,6 @@ function MenuItemComponent({
                   }
                 }}
               >
-                {/* {isSubIndexSelected && (
-                <div className="absolute left-[0px] h-[2rem] rounded-r-md border-[2px] border-primary-4"></div>
-              )} */}
-                {/* <img
-                src={
-                  subItemIndexSelected === subIndex
-                    ? iconSelected
-                    : item.icon
-                }
-                alt=""
-                className={` ${isOpenSideBar ? 'size-[1.6rem]' : 'size-full'}`}
-              /> */}
                 {isOpenSideBar && (
                   <h3
                     className={`${isSubIndexSelected ? 'text-primary-4' : ''} ml-8 select-none`}

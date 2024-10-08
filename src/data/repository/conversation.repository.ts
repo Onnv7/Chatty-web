@@ -1,4 +1,7 @@
-import { ConversationEntity } from '../../domain/entity/conversation.entity';
+import {
+  ConversationEntity,
+  ConversationInfoEntity,
+} from '../../domain/entity/conversation.entity';
 import { ConversationApi } from '../api/conversation.api';
 
 export class ConversationRepository {
@@ -14,5 +17,25 @@ export class ConversationRepository {
       totalPage: data.totalPage,
       conversationList: data.conversationList as ConversationEntity[],
     };
+  }
+
+  async getConversation(
+    conversationId: string,
+  ): Promise<ConversationInfoEntity> {
+    const data = await this.conversationApi.getConversation(conversationId);
+    return {
+      memberList: data.memberList,
+    };
+  }
+
+  async getConversationIdByFriendId(
+    friendId: number,
+    userId: number,
+  ): Promise<string | undefined> {
+    const data = await this.conversationApi.getConversationByFriendId(
+      friendId,
+      userId,
+    );
+    return data.id;
   }
 }

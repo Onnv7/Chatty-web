@@ -17,6 +17,8 @@ export default ({
         7: 700,
       },
       fontSize: {
+        6: "0.6rem",
+        7: "0.7rem",
         8: "0.8rem",
         9: "0.9rem",
         12: "1.2rem",
