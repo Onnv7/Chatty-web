@@ -17,7 +17,11 @@ import { AppRouter } from '../../../../../common/config/router.config';
 import MenuItemComponent from './MenuItemComponent';
 import { useSocketContext } from '../../../../../common/context/socket.context';
 import { SocketNamespaces } from '../../../../../common/constant/socket.constant';
-import { emitHeartbeat } from '../../../../../domain/usecase/app.usecase';
+import {
+  emitHeartbeat,
+  emitRegisterSocket,
+} from '../../../../../domain/usecase/app.usecase';
+import { usePeerContext } from '../../../../../common/context/peer.context';
 type SideMenuComponentProps = {
   className?: string;
 };
@@ -83,17 +87,24 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
       navigateTo: AppRouter.login.route,
     },
   ];
+  const { peer, peerId } = usePeerContext();
   const intervalRef = useRef<number | null>(null);
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
   useEffect(() => {
+    if (peerId) {
+      emitRegisterSocket(
+        { userId: userId!, peerId: peer.id },
+        conversationSocket,
+      );
+    }
+  }, [peerId]);
+  useEffect(() => {
     const emitData = () => {
       emitHeartbeat({ userId: userId! }, conversationSocket);
     };
-    conversationSocket.emit('register', {
-      userId: userId,
-    });
+
     intervalRef.current = setInterval(emitData, 30000);
   }, [userId]);
 

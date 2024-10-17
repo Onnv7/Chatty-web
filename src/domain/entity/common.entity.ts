@@ -10,6 +10,11 @@ export interface HeartbeatSocketData {
   userId: number;
 }
 
+export interface RegisterSocketData {
+  userId: number;
+  peerId: string;
+}
+
 export interface TrackingFriendSocketData {
   senderId: number;
   activeStatus: ActiveStatus;

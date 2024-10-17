@@ -45,12 +45,15 @@ function ConversationChat() {
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [openReactMsgId, setOpenReactMsgId] = useState('');
-  const [isVisibleReactId, setIsVisibleReactId] = useState('');
+  const [msgHoverId, setMsgHoverId] = useState('');
   const [conversationMessageList, setConversationMessageList] = useState<
     MessageEntity[]
   >([]);
-  const messageHoverRef = useRef<HTMLDivElement>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, right: 0 });
+
+  const [dateTimeSend, setDateTimeSendPosition] = useState({
+    top: 0,
+    right: 0,
+  });
   const [conversationEntity, setConversationEntity] =
     useState<ConversationInfoEntity>();
 
@@ -107,10 +110,9 @@ function ConversationChat() {
       }
     }
   };
-  const handleSendReaction = async (emoji: EmojiClickData, msgId: string) => {
+  const handleSendReaction = async (emoji: string, msgId: string) => {
     setOpenReactMsgId('');
-    const data = await reactMessage(userId!, emoji.emoji, msgId);
-    console.log('🚀 ~ handleSendReaction ~ data:', data);
+    const data = await reactMessage(userId!, emoji, msgId);
     const newMsgList = updateReactionMessage(conversationMessageList, {
       messageId: msgId,
       reactionList: data.reactionList,
@@ -220,7 +222,6 @@ function ConversationChat() {
         name={conversationEntity?.memberList.find((u) => u.id !== userId)?.name}
       />
       <hr className="my-2" />
-      <EmojiReactionComponent />
 
       <section
         className="flex grow flex-col overflow-y-scroll"
@@ -244,7 +245,7 @@ function ConversationChat() {
                 )}
               </div>
               {!imSender
-                ? messageChain.map((msg, index) => {
+                ? messageChain.map((msg, msgIndex) => {
                     return (
                       <div className="flex" key={msg.id}>
                         <span className="flex grow basis-1/2 flex-col">
@@ -256,51 +257,42 @@ function ConversationChat() {
                                 )?.avatarUrl
                               }
                               alt=""
-                              className={`${haveOne || index === lastIndex ? 'visible' : 'invisible'} h-[1.8rem] w-[1.8rem] rounded-full object-cover`}
+                              className={`${haveOne || msgIndex === lastIndex ? 'visible' : 'invisible'} h-[1.8rem] w-[1.8rem] rounded-full object-cover`}
                             />
 
-                            <div
-                              className="relative w-fit max-w-[28rem] grow text-wrap break-words"
-                              onMouseEnter={() => {
-                                if (openReactMsgId === '')
-                                  setIsVisibleReactId(msg.id!);
-                              }}
-                              onMouseLeave={() => {
-                                if (openReactMsgId === '')
-                                  setIsVisibleReactId('');
-                              }}
-                            >
-                              <p
-                                className={`${haveOne ? 'rounded-l-[0.8rem]' : index === 0 ? 'rounded-tl-[0.8rem]' : index === lastIndex ? 'rounded-bl-[0.8rem]' : ''} peer relative w-fit max-w-[28rem] hyphens-manual whitespace-pre-wrap text-wrap break-words rounded-r-[0.8rem] border-[1px] px-2 py-1 shadow-[0_0_2px_0px_rgba(0,0,0,0.3)]`}
-                                ref={
-                                  isVisibleReactId === msg.id
-                                    ? messageHoverRef
-                                    : null
-                                }
-                                onMouseEnter={() => {
-                                  console.log('mouse enter');
-                                  if (messageHoverRef.current) {
-                                    const rect =
-                                      messageHoverRef.current.getBoundingClientRect();
-                                    console.log('mouse enter 1', rect);
-                                    setTooltipPosition({
-                                      top: rect.top,
-                                      right: window.innerWidth - rect.right,
-                                    });
-                                  }
+                            <div className="relative w-fit max-w-[28rem] text-wrap break-words">
+                              <div
+                                className={`${haveOne ? 'rounded-l-[0.8rem]' : msgIndex === 0 ? 'rounded-tl-[0.8rem]' : msgIndex === lastIndex ? 'rounded-bl-[0.8rem]' : ''} peer relative w-fit max-w-[28rem] hyphens-manual whitespace-pre-wrap text-wrap break-words rounded-r-[0.8rem] border-[1px] px-2 py-1 shadow-[0_0_2px_0px_rgba(0,0,0,0.3)]`}
+                                onMouseEnter={(e) => {
+                                  const target =
+                                    e.target as HTMLParagraphElement;
+                                  const rect = target.getBoundingClientRect();
+
+                                  setDateTimeSendPosition({
+                                    top: rect.bottom,
+                                    right: window.innerWidth - rect.left,
+                                  });
+                                  setMsgHoverId(msg.id!);
+                                }}
+                                onMouseLeave={() => {
+                                  setMsgHoverId('');
                                 }}
                               >
-                                {msg.content}
-                                {isVisibleReactId === msg.id && (
-                                  <div
-                                    className="absolute bottom-0 left-[100%] box-content flex aspect-[1/1] size-[2rem] cursor-pointer items-center justify-end pl-1"
-                                    onClick={() => setOpenReactMsgId(msg.id!)}
-                                  >
-                                    <img
-                                      src={REACT_EMOJI_ICON}
-                                      alt=""
-                                      className="h-[2rem] w-[2rem] p-2"
-                                    />{' '}
+                                <p>{msg.content}</p>
+                                {(msgHoverId === msg.id ||
+                                  openReactMsgId !== '') && (
+                                  <div className="absolute bottom-0 left-[100%] box-content flex aspect-[1/1] size-[2rem] cursor-pointer items-center justify-end pl-1">
+                                    {(openReactMsgId === msg.id ||
+                                      msgHoverId === msg.id) && (
+                                      <img
+                                        src={REACT_EMOJI_ICON}
+                                        alt=""
+                                        className="h-[2rem] w-[2rem] p-2"
+                                        onClick={() =>
+                                          setOpenReactMsgId(msg.id!)
+                                        }
+                                      />
+                                    )}
                                     <div
                                       className="absolute bottom-[120%] left-0 translate-x-[-10%]"
                                       ref={
@@ -310,96 +302,113 @@ function ConversationChat() {
                                       }
                                     >
                                       {openReactMsgId === msg.id && (
-                                        <EmojiPicker
-                                          width={500}
-                                          className="h-[20rem]"
-                                          reactionsDefaultOpen={true}
-                                          emojiStyle={EmojiStyle.NATIVE}
-                                          onReactionClick={async (
-                                            emoji,
-                                            event,
-                                          ) => {
+                                        <EmojiReactionComponent
+                                          onClickEmoji={async (emoji) => {
                                             await handleSendReaction(
                                               emoji,
                                               msg.id!,
                                             );
+                                            setOpenReactMsgId('');
                                           }}
                                         />
                                       )}
                                     </div>
                                   </div>
                                 )}
-                                {msg.reactedCount > 0 && (
-                                  <div className="absolute right-[-1rem] top-[90%]">
-                                    <span className="bg-white-500 flex rounded-xl border-[1px] bg-white px-1">
-                                      {msg.reactionList.map((emoji) => (
-                                        <p className="align-middle text-9">
+                              </div>
+                              {msg.reactedCount > 0 && (
+                                <div className="absolute left-[calc(100%-1rem)] top-[90%] cursor-pointer">
+                                  <span className="bg-white-500 flex rounded-xl border-[1px] bg-white px-1">
+                                    {msg.reactionList.map(
+                                      (emoji, emojiIndex) => (
+                                        <p
+                                          key={emojiIndex}
+                                          className="align-middle text-9"
+                                        >
                                           {emoji}
                                         </p>
-                                      ))}
-                                      {
-                                        <p className="text-9">
-                                          {msg.reactedCount}
-                                        </p>
-                                      }
-                                    </span>
-                                  </div>
-                                )}
-                              </p>
+                                      ),
+                                    )}
+                                    {
+                                      <p className="text-9">
+                                        {msg.reactedCount}
+                                      </p>
+                                    }
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            <div className="static">
+                            {msgHoverId === msg.id && (
                               <p
-                                className="visible absolute right-[90%] top-[10%] z-50 min-w-[20rem] rounded-xl bg-gray-200 px-2 py-1 text-center text-gray-500 peer-hover:visible"
+                                className="absolute right-[90%] top-[100%] z-50 min-w-[20rem] rounded-xl bg-gray-200 px-2 py-1 text-center text-gray-500 peer-hover:visible"
                                 style={{
-                                  top: `${tooltipPosition.top - 8}px`,
-                                  right: `${tooltipPosition.right}px`,
+                                  top: `${dateTimeSend.top - 40}px`,
+                                  right: `${dateTimeSend.right}px`,
                                 }}
                               >
                                 {formatDateWithWeekday(new Date(msg.createdAt))}
                               </p>
-                            </div>
+                            )}
                           </div>
                           {msg.reactedCount > 0 && (
-                            <div className="h-[1rem]"></div>
+                            <div className="h-[1.2rem]"></div>
                           )}
                         </span>
                         <div className="grow basis-1/2"></div>
                       </div>
                     );
                   })
-                : messageChain.map((msg, index) => {
+                : messageChain.map((msg, msgIndex) => {
                     return (
                       <div className="flex" key={msg.id}>
                         <div className="grow basis-1/2"></div>
-                        <span className="ml-auto flex grow basis-1/2 flex-col">
-                          <div className="flex items-center justify-end gap-2 text-wrap break-words">
-                            <div
-                              className="relative w-full max-w-[28rem] grow text-wrap break-words"
-                              onMouseEnter={() => {
-                                if (openReactMsgId === '')
-                                  setIsVisibleReactId(msg.id!);
-                              }}
-                              onMouseLeave={() => {
-                                if (openReactMsgId === '')
-                                  setIsVisibleReactId('');
-                              }}
-                            >
-                              <p
-                                className={`${haveOne ? 'rounded-r-[0.8rem]' : index === 0 ? 'rounded-tr-[0.8rem]' : index === lastIndex ? 'rounded-br-[0.8rem]' : ''} peer relative ml-auto w-fit max-w-[28rem] hyphens-manual text-wrap break-words rounded-l-[0.8rem] border-[1px] bg-cyan-400 px-2 py-1 shadow-[0_0_2px_0px_rgba(0,0,0,0.3)]`}
+                        <span className="flex grow basis-1/2 flex-col">
+                          <div className="flex flex-row-reverse items-center gap-2 text-wrap break-words">
+                            {/* <img
+                              src={
+                                conversationEntity?.memberList.find(
+                                  (member) => member.id === message.senderId,
+                                )?.avatarUrl
+                              }
+                              alt=""
+                              className={`${haveOne || index === lastIndex ? 'visible' : 'invisible'} h-[1.8rem] w-[1.8rem] rounded-full object-cover`}
+                            /> */}
+
+                            <div className="relative w-fit max-w-[28rem] text-wrap break-words">
+                              <div
+                                className={`${haveOne ? 'rounded-r-[0.8rem]' : msgIndex === 0 ? 'rounded-tr-[0.8rem]' : msgIndex === lastIndex ? 'rounded-br-[0.8rem]' : ''} peer relative w-fit max-w-[28rem] hyphens-manual whitespace-pre-wrap text-wrap break-words rounded-l-[0.8rem] border-[1px] bg-cyan-200 px-2 py-1 shadow-[0_0_2px_0px_rgba(0,0,0,0.3)]`}
+                                onMouseEnter={(e) => {
+                                  const target =
+                                    e.target as HTMLParagraphElement;
+                                  const rect = target.getBoundingClientRect();
+
+                                  setDateTimeSendPosition({
+                                    top: rect.top,
+                                    right: window.innerWidth - rect.left + 30,
+                                  });
+                                  setMsgHoverId(msg.id!);
+                                }}
+                                onMouseLeave={() => {
+                                  setMsgHoverId('');
+                                }}
                               >
-                                {msg.content}
-                                {isVisibleReactId === msg.id && (
-                                  <div
-                                    className="absolute bottom-0 right-[100%] box-content flex aspect-[1/1] size-[2rem] cursor-pointer items-center justify-end pl-1"
-                                    onClick={() => setOpenReactMsgId(msg.id!)}
-                                  >
-                                    <img
-                                      src={REACT_EMOJI_ICON}
-                                      alt=""
-                                      className="h-[2rem] w-[2rem] p-2"
-                                    />
+                                <p>{msg.content}</p>
+                                {(msgHoverId === msg.id ||
+                                  openReactMsgId !== '') && (
+                                  <div className="absolute bottom-0 right-[100%] box-content flex aspect-[1/1] size-[2rem] cursor-pointer items-center justify-end pl-1">
+                                    {(openReactMsgId === msg.id ||
+                                      msgHoverId === msg.id) && (
+                                      <img
+                                        src={REACT_EMOJI_ICON}
+                                        alt=""
+                                        className="h-[2rem] w-[2rem] p-2"
+                                        onClick={() =>
+                                          setOpenReactMsgId(msg.id!)
+                                        }
+                                      />
+                                    )}
                                     <div
-                                      className="absolute bottom-[120%] right-0 translate-x-[10%]"
+                                      className="absolute bottom-[120%] right-[100%]"
                                       ref={
                                         openReactMsgId === msg.id
                                           ? emojiPickerRef
@@ -407,15 +416,9 @@ function ConversationChat() {
                                       }
                                     >
                                       {openReactMsgId === msg.id && (
-                                        <EmojiPicker
-                                          width={500}
-                                          className="h-[20rem]"
-                                          reactionsDefaultOpen={true}
-                                          emojiStyle={EmojiStyle.NATIVE}
-                                          onReactionClick={async (
-                                            emoji,
-                                            event,
-                                          ) => {
+                                        <EmojiReactionComponent
+                                          onClickEmoji={async (emoji) => {
+                                            setOpenReactMsgId('');
                                             await handleSendReaction(
                                               emoji,
                                               msg.id!,
@@ -426,31 +429,43 @@ function ConversationChat() {
                                     </div>
                                   </div>
                                 )}
-                                {msg.reactedCount > 0 && (
-                                  <div className="absolute left-[-1rem] top-[96%]">
-                                    <span className="bg-white-500 flex rounded-xl border-[1px] bg-white px-1">
-                                      {msg.reactionList.map((emoji) => (
-                                        <p className="align-middle text-9">
+                              </div>
+                              {msg.reactedCount > 0 && (
+                                <div className="absolute right-[calc(100%-1rem)] top-[90%] cursor-pointer">
+                                  <span className="bg-white-500 flex rounded-xl border-[1px] bg-white px-1">
+                                    {msg.reactionList.map(
+                                      (emoji, emojiIndex) => (
+                                        <p
+                                          key={emojiIndex}
+                                          className="align-middle text-9"
+                                        >
                                           {emoji}
                                         </p>
-                                      ))}
-                                      {
-                                        <p className="text-9">
-                                          {msg.reactedCount}
-                                        </p>
-                                      }
-                                    </span>
-                                  </div>
-                                )}
-                              </p>
-
-                              <p className="invisible absolute left-0 top-full z-50 min-w-[20rem] rounded-xl bg-gray-200 px-2 py-1 text-center text-gray-500 peer-hover:visible">
+                                      ),
+                                    )}
+                                    {
+                                      <p className="text-9">
+                                        {msg.reactedCount}
+                                      </p>
+                                    }
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            {msgHoverId === msg.id && (
+                              <p
+                                className="absolute z-50 min-w-[20rem] rounded-xl bg-gray-200 px-2 py-1 text-center text-gray-500"
+                                style={{
+                                  top: `${dateTimeSend.top - 8}px`,
+                                  right: `${dateTimeSend.right}px`,
+                                }}
+                              >
                                 {formatDateWithWeekday(new Date(msg.createdAt))}
                               </p>
-                            </div>
+                            )}
                           </div>
                           {msg.reactedCount > 0 && (
-                            <div className="h-[1rem]"></div>
+                            <div className="h-[1.2rem]"></div>
                           )}
                         </span>
                       </div>

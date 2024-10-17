@@ -50,6 +50,20 @@ function ConversationList() {
           }),
         );
         conversationDispatch(refreshCallConversationList(false));
+        if (
+          conversationId === undefined &&
+          !conversationId &&
+          !friendId &&
+          conversationPayload.conversationList[0]?.id
+        ) {
+          conversationDispatch(
+            setConversationSelected(
+              conversationPayload.conversationList[0]?.id,
+            ),
+          );
+
+          setSearchParams({ id: conversationPayload.conversationList[0]?.id });
+        }
       }
     };
     fetchData();

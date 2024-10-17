@@ -4,21 +4,16 @@ import {
   useConversationSelector,
   conversationSelector,
 } from '../redux/conversation.store';
-import Peer from 'peerjs';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '../../../../common/context/auth.context';
 import {
-  getMessagePage,
   getConversation,
   getConversationId,
   getFriendProfileSummary,
 } from '../../../../domain/usecase/conversation.usecase';
 import { useCallApi } from '../../../../common/hook/useCallApi';
-import {
-  ConversationInfoEntity,
-  ConversationSummaryEntity,
-} from '../../../../domain/entity/conversation.entity';
+import { ConversationSummaryEntity } from '../../../../domain/entity/conversation.entity';
 type HeadConversationComponentProps = {
   imageUrl?: string;
   name?: string;

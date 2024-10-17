@@ -6,6 +6,7 @@ import { io, Socket } from 'socket.io-client';
 type SocketContextType = {
   socket: (namespace: string) => Socket;
   disconnectSocket: (namespace: string) => void;
+  peer: Peer;
 };
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -20,7 +21,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!sockets.current[namespace]) {
       const socket = io(`http://localhost:1001/${namespace}`);
       socket.on('connect', () => {
-        // console.log(`Connecting to ${namespace}`, socket.id);
+        console.log(`Connecting to ${namespace}`, socket.id);
       });
       sockets.current[namespace] = socket;
     }
@@ -33,23 +34,34 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       socket.disconnect();
       delete sockets.current[namespace];
     }
+    initPeer();
   };
 
-  const socket = (namespace: string) => connectSocket(namespace);
-  useEffect(() => {
+  const initPeer = () => {
     const peerCaller = peer.current;
 
     peerCaller.on('open', (id) => {
-      // console.log('My peer ID is:', id);
+      console.log('My peer ID is:', id);
     });
+  };
 
-    return () => {
-      peerCaller.disconnect();
-    };
-  }, []);
+  const socket = (namespace: string) => connectSocket(namespace);
+  // useEffect(() => {
+  //   const peerCaller = peer.current;
+
+  //   peerCaller.on('open', (id) => {
+  //     console.log('My peer ID is:', id);
+  //   });
+
+  //   return () => {
+  //     peerCaller.disconnect();
+  //   };
+  // }, []);
 
   return (
-    <SocketContext.Provider value={{ socket, disconnectSocket }}>
+    <SocketContext.Provider
+      value={{ socket, disconnectSocket, peer: peer.current }}
+    >
       {children}
     </SocketContext.Provider>
   );

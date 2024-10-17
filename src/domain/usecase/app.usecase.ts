@@ -3,6 +3,7 @@ import { authRepository } from '../../data/repository';
 import { ConversationEntity } from '../entity/conversation.entity';
 import {
   HeartbeatSocketData,
+  RegisterSocketData,
   TrackingFriendSocketData,
 } from '../entity/common.entity';
 
@@ -14,6 +15,10 @@ export function getUserIdLocal() {
 
 export function emitHeartbeat(data: HeartbeatSocketData, socket: Socket) {
   socket.emit('heartbeat', data);
+}
+
+export function emitRegisterSocket(data: RegisterSocketData, socket: Socket) {
+  socket.emit('register', data);
 }
 
 export function emitJoinTrackingRoom(

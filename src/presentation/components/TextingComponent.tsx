@@ -63,7 +63,6 @@ function TextingComponent({
       return;
     }
     if (conversationId) {
-      console.log('send conversation', conversationId);
       const msgSend = await handleSendMessageToRoom(
         textMessage,
         userId!,
@@ -90,7 +89,6 @@ function TextingComponent({
         receiverId!,
       );
       setTextMessage('');
-      console.log('send friend', receiverId, conversationId);
       navigate(`${AppRouter.conversation.route}?id=${conversationId}`);
 
       conversationDispatch(refreshCallConversationList(true));
