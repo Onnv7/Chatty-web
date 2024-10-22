@@ -11,12 +11,17 @@ import {
   getConversation,
   getConversationId,
   getFriendProfileSummary,
+  openCallingWindow,
 } from '../../../../domain/usecase/conversation.usecase';
 import { useCallApi } from '../../../../common/hook/useCallApi';
 import { ConversationSummaryEntity } from '../../../../domain/entity/conversation.entity';
+import { usePeerContext } from '../../../../common/context/peer.context';
+import { useSocketContext } from '../../../../common/context/socket.context';
+import { CallRole } from '../../../../common/constant/enum';
 type HeadConversationComponentProps = {
   imageUrl?: string;
   name?: string;
+  friendId?: number;
 };
 function HeadConversationComponent({
   imageUrl,
@@ -24,10 +29,10 @@ function HeadConversationComponent({
 }: HeadConversationComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const conversationId = searchParams.get('id');
-  const friendId =
+  const friendIdParam =
     searchParams.get('friend') ?? Number(searchParams.get('friend'));
   const { userId } = useAuthContext();
-  const conversationPayload = useConversationSelector(conversationSelector);
+  const { handleCall } = usePeerContext();
   const conversationApi = useCallApi();
   const [conversationInfo, setConversationInfo] = useState<
     ConversationSummaryEntity | undefined
@@ -35,30 +40,40 @@ function HeadConversationComponent({
     imageUrl: imageUrl ?? '',
     name: name ?? '',
   });
+  async function handleCalling() {
+    handleCall(conversationId!);
+  }
+
+  async function handleVideoCall() {
+    if (conversationId) openCallingWindow(conversationId, CallRole.CALLER);
+  }
 
   useEffect(() => {
     if (conversationId) {
       conversationApi.callApi(async () => {
-        const data = await getConversation(conversationId);
+        const data = await getConversation(conversationId, userId!);
         const friend = data.memberList.find((data) => data.id !== userId);
         setConversationInfo({
           imageUrl: friend?.avatarUrl!,
           name: friend?.name!,
         });
       });
-    } else if (Number(friendId)) {
+    } else if (Number(friendIdParam)) {
       conversationApi.callApi(async () => {
-        const converId = await getConversationId(Number(friendId), userId!);
+        const converId = await getConversationId(
+          Number(friendIdParam),
+          userId!,
+        );
         if (converId) setSearchParams({ id: converId });
         else {
           const { fullName, avatarUrl } = await getFriendProfileSummary(
-            Number(friendId),
+            Number(friendIdParam),
           );
           setConversationInfo({ name: fullName, imageUrl: avatarUrl });
         }
       });
     }
-  }, [conversationId, friendId]);
+  }, [conversationId, friendIdParam]);
   return (
     <section className="flex items-center gap-4">
       <img
@@ -74,11 +89,13 @@ function HeadConversationComponent({
           src={VIDEO_CALL_ICON}
           alt=""
           className="size-[1.6rem] cursor-pointer"
+          onClick={() => handleVideoCall()}
         />
         <img
           src={PHONE_CALL_ICON}
           alt=""
           className="size-[1.6rem] cursor-pointer"
+          onClick={() => handleCalling()}
         />
       </div>
     </section>

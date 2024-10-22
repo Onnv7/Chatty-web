@@ -34,6 +34,7 @@ function ConversationList() {
   const conversationPayload = useConversationSelector(conversationSelector);
   const [searchParams, setSearchParams] = useSearchParams();
   const conversationId = searchParams.get('id');
+
   const friendId = searchParams.get('friend');
   const [conversationType, setConversationType] = useState(0);
   const conversationScrollRef = useRef<HTMLSelectElement>(null);

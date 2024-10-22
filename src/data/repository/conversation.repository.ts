@@ -21,10 +21,14 @@ export class ConversationRepository {
 
   async getConversation(
     conversationId: string,
+    userId: number,
   ): Promise<ConversationInfoEntity> {
     const data = await this.conversationApi.getConversation(conversationId);
+    const friend = data.memberList.find((u) => u.id !== userId);
     return {
       memberList: data.memberList,
+      imageUrl: friend?.avatarUrl || '',
+      name: friend?.name || '',
     };
   }
 

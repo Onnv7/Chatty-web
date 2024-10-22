@@ -29,3 +29,14 @@ export enum ActiveStatus {
   ONLINE = 'ONLINE',
   OFFLINE = 'OFFLINE',
 }
+
+export enum SourceFrom {
+  WINDOW = 'WINDOW',
+  DIRECT = 'DIRECT',
+  ANOTHER_PAGE = 'ANOTHER_PAGE',
+}
+
+export enum CallRole {
+  CALLER = 'CALLER',
+  CALLEE = 'CALLEE',
+}

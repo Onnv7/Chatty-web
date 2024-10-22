@@ -7,6 +7,7 @@ import {
 import {
   GetFriendProfileSummary,
   GetInvitationResponse,
+  GetPeerIdListResponse,
   SearchFriendResponse,
 } from '../model/response/friend.response';
 
@@ -59,6 +60,12 @@ export class FriendAPI {
     friendId: number,
   ): Promise<GetFriendProfileSummary> {
     const responseData = (await http.get(`/friend/${friendId}/profile`)).data;
+    return responseData.data;
+  }
+
+  async getPeerIdList(friendId: number): Promise<GetPeerIdListResponse> {
+    const responseData = (await http.get(`/friend/${friendId}/peerIdList`))
+      .data;
     return responseData.data;
   }
 }

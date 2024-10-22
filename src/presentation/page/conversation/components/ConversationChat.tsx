@@ -138,7 +138,7 @@ function ConversationChat() {
         }));
       });
       conversationApi.callApi(async () => {
-        const data = await getConversation(conversationId);
+        const data = await getConversation(conversationId, userId!);
         setConversationEntity(data);
       });
     } else if (Number(friendId)) {
@@ -216,10 +216,11 @@ function ConversationChat() {
   return (
     <div className="flex size-full flex-col rounded-[0.8rem] bg-white px-4 py-2 shadow-md">
       <HeadConversationComponent
-        imageUrl={
-          conversationEntity?.memberList.find((u) => u.id !== userId)?.avatarUrl
+        imageUrl={conversationEntity?.imageUrl}
+        name={conversationEntity?.name}
+        friendId={
+          conversationEntity?.memberList.find((u) => u.id !== userId)?.id
         }
-        name={conversationEntity?.memberList.find((u) => u.id !== userId)?.name}
       />
       <hr className="my-2" />
 

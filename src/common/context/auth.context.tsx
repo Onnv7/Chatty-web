@@ -1,6 +1,14 @@
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useReducer,
+  useState,
+} from 'react';
 import { AuthState, AuthAction, AuthReducer } from './auth.reducer';
-import { authRepository } from '../../data/repository';
+import { authRepository, profileRepository } from '../../data/repository';
+import { Gender } from '../constant/enum';
+import { UserProfileEntity } from '../../domain/entity/conversation.entity';
 
 let userData = null;
 if (localStorage.getItem('user') !== 'undefined') {
@@ -12,6 +20,14 @@ const INITIAL_STATE: AuthState = {
 
 type AuthContextType = {
   userId: number | null;
+  profile: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl: string;
+    gender: Gender;
+    birthDate: Date;
+  } | null;
   authDispatch: React.Dispatch<AuthAction>;
   isAuthenticated: () => boolean;
 };
@@ -30,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [state, dispatch] = useReducer(AuthReducer, INITIAL_STATE);
+  const [profile, setProfile] = useState<UserProfileEntity | null>(null);
 
   const isAuthenticated = () => {
     if (state.userId) {
@@ -37,11 +54,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     return false;
   };
+
   useEffect(() => {
     const loadingData = async () => {
       if (state.userId) {
         try {
-          // const data =await userRepository.getFirstName(state.userId);
+          const userProfile = await profileRepository.getUserProfile(
+            state.userId,
+          );
+          setProfile(userProfile);
         } catch (err) {
           dispatch({ type: 'LOGIN_FAILURE' });
         }
@@ -54,7 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ userId: state.userId, authDispatch: dispatch, isAuthenticated }}
+      value={{
+        userId: state.userId,
+        authDispatch: dispatch,
+        isAuthenticated,
+        profile: profile,
+      }}
     >
       {children}
     </AuthContext.Provider>

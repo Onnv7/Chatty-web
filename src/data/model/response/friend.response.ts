@@ -28,3 +28,7 @@ export type GetFriendProfileSummary = {
   fullName: string;
   avatarUrl: string;
 };
+
+export type GetPeerIdListResponse = {
+  peerIdList: string[];
+};

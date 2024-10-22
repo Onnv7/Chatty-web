@@ -21,7 +21,6 @@ import {
   emitHeartbeat,
   emitRegisterSocket,
 } from '../../../../../domain/usecase/app.usecase';
-import { usePeerContext } from '../../../../../common/context/peer.context';
 type SideMenuComponentProps = {
   className?: string;
 };
@@ -87,19 +86,15 @@ function SideMenuComponent({ className = '' }: SideMenuComponentProps) {
       navigateTo: AppRouter.login.route,
     },
   ];
-  const { peer, peerId } = usePeerContext();
   const intervalRef = useRef<number | null>(null);
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
+
   useEffect(() => {
-    if (peerId) {
-      emitRegisterSocket(
-        { userId: userId!, peerId: peer.id },
-        conversationSocket,
-      );
-    }
-  }, [peerId]);
+    emitRegisterSocket({ userId: userId!, peerId: '' }, conversationSocket);
+  }, []);
+
   useEffect(() => {
     const emitData = () => {
       emitHeartbeat({ userId: userId! }, conversationSocket);

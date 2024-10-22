@@ -1,3 +1,4 @@
+import Peer, { MediaConnection } from 'peerjs';
 import { ActiveStatus } from '../../common/constant/enum';
 
 export type PageEntity = {
@@ -19,3 +20,12 @@ export interface TrackingFriendSocketData {
   senderId: number;
   activeStatus: ActiveStatus;
 }
+
+export type OngoingCallEntity = {
+  isRinging: boolean;
+  conversation: {
+    id: string;
+    imageUrl: string;
+    name: string;
+  };
+};

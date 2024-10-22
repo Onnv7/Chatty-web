@@ -10,6 +10,8 @@ import {
   SendNewMessageSocketData,
   SendReactionSocketData,
 } from '../entity/conversation.entity';
+import Peer from 'peerjs';
+import { CallRole } from '../../common/constant/enum';
 
 // export async function getConversationPage(
 //   page: number,
@@ -94,8 +96,11 @@ export async function handleSendMessageToFriend(
   ]);
 }
 
-export async function getConversation(conversationId: string) {
-  const data = await conversationRepository.getConversation(conversationId);
+export async function getConversation(conversationId: string, userId: number) {
+  const data = await conversationRepository.getConversation(
+    conversationId,
+    userId,
+  );
   return data;
 }
 
@@ -175,4 +180,67 @@ export function updateReactionMessage(
     }
     return message;
   });
+}
+
+export async function openCallingWindow(
+  conversationId: string,
+  callRole?: CallRole,
+  callerSocketId?: string,
+) {
+  if (callRole === undefined) {
+    callRole = CallRole.CALLER;
+  }
+  const w = 1066;
+  const h = 600;
+  const dualScreenLeft =
+    window.screenLeft !== undefined ? window.screenLeft : window.screenX;
+  const dualScreenTop =
+    window.screenTop !== undefined ? window.screenTop : window.screenY;
+
+  const width = window.innerWidth
+    ? window.innerWidth
+    : document.documentElement.clientWidth
+      ? document.documentElement.clientWidth
+      : screen.width;
+  const height = window.innerHeight
+    ? window.innerHeight
+    : document.documentElement.clientHeight
+      ? document.documentElement.clientHeight
+      : screen.height;
+
+  const systemZoom = width / window.screen.availWidth;
+  const left = (width - w) / 2 / systemZoom + dualScreenLeft;
+  const top = (height - h) / 2 / systemZoom + dualScreenTop;
+  const url = callRole
+    ? `http://localhost:3000/calling?id=${conversationId}&source=window`
+    : `http://localhost:3000/calling?id=${conversationId}`;
+  const newWindow = window.open(
+    url, // URL hoặc nội dung mà bạn muốn hiển thị trong cửa sổ mới
+    '_blank',
+    `width=${w / systemZoom}, 
+      height=${h / systemZoom}, 
+      top=${top}, 
+      left=${left}`,
+  );
+
+  if (newWindow) {
+    newWindow.focus();
+    // newWindow.onload = () => {
+    //   console.log('🚀 ~ isCaller:', isCaller);
+    //   newWindow.postMessage({ conversationId, isCaller }, '*');
+    // };
+
+    // newWindow.onload = () => {
+    //   console.log('posted');
+    //   newWindow.postMessage(
+    //     { message: 'Hello from parent window', data: 123 },
+    //     '*',
+    //   );
+    // };
+
+    newWindow.opener.sharedData = {
+      callRole: callRole,
+      callerSocketId: callRole === CallRole.CALLEE ? callerSocketId : undefined,
+    };
+  }
 }

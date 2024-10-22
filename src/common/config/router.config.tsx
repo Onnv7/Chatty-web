@@ -1,3 +1,4 @@
+import CallingPage from '../../presentation/page/calling/CallingPage';
 import ConversationPage from '../../presentation/page/conversation/ConversationPage';
 import FriendInvitationPage from '../../presentation/page/friend-request/FriendInvitationPage';
 import FriendPage from '../../presentation/page/friend/FriendPage';
@@ -27,5 +28,9 @@ export const AppRouter = {
   invitation: {
     page: <FriendInvitationPage />,
     route: '/invitation',
+  },
+  calling: {
+    page: <CallingPage />,
+    route: '/calling',
   },
 };

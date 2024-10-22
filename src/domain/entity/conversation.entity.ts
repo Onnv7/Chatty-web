@@ -1,4 +1,4 @@
-import { ActiveStatus } from '../../common/constant/enum';
+import { ActiveStatus, Gender } from '../../common/constant/enum';
 
 export type ConversationEntity = {
   id: string;
@@ -45,6 +45,8 @@ export type ConversationInfoEntity = {
     name: string;
     avatarUrl: string;
   }[];
+  imageUrl: string;
+  name: string;
 };
 
 export interface SendNewMessageSocketData {
@@ -75,4 +77,13 @@ export type ConversationSummaryEntity = {
 export type ReactMessageEntity = {
   reactionList: string[];
   reactedCount: number;
+};
+
+export type UserProfileEntity = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string;
+  gender: Gender;
+  birthDate: Date;
 };

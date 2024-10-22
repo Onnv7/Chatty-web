@@ -80,4 +80,9 @@ export class FriendRepository {
       ...data,
     };
   }
+
+  async getPeerIdList(friendId: number): Promise<string[]> {
+    const data = await this.friendApi.getPeerIdList(friendId);
+    return data.peerIdList;
+  }
 }

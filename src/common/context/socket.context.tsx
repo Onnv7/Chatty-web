@@ -4,8 +4,8 @@ import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 type SocketContextType = {
-  socket: (namespace: string) => Socket;
-  disconnectSocket: (namespace: string) => void;
+  socket: (namespace: 'conversation' | string) => Socket;
+  disconnectSocket: (namespace: 'conversation' | string) => void;
   peer: Peer;
 };
 
@@ -17,11 +17,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const sockets = useRef<{ [key: string]: Socket }>({});
   const peer = useRef<Peer>(new Peer());
 
-  const connectSocket = (namespace: string) => {
+  const connectSocket = (namespace: 'conversation' | string) => {
     if (!sockets.current[namespace]) {
       const socket = io(`http://localhost:1001/${namespace}`);
       socket.on('connect', () => {
-        console.log(`Connecting to ${namespace}`, socket.id);
+        console.log(
+          `Connecting to conversation socket ${namespace}`,
+          socket.id,
+        );
       });
       sockets.current[namespace] = socket;
     }
@@ -39,25 +42,23 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const initPeer = () => {
     const peerCaller = peer.current;
-
     peerCaller.on('open', (id) => {
       console.log('My peer ID is:', id);
     });
   };
 
-  const socket = (namespace: string) => connectSocket(namespace);
+  useEffect(() => {
+    socket('conversation');
+  }, []);
+
+  const socket = (namespace: 'conversation' | string) =>
+    connectSocket(namespace);
   // useEffect(() => {
-  //   const peerCaller = peer.current;
+  //   const conversationSocket = socket('conversation');
+  //   conversationSocket.on('receive-phone-call', (data) => {
 
-  //   peerCaller.on('open', (id) => {
-  //     console.log('My peer ID is:', id);
   //   });
-
-  //   return () => {
-  //     peerCaller.disconnect();
-  //   };
   // }, []);
-
   return (
     <SocketContext.Provider
       value={{ socket, disconnectSocket, peer: peer.current }}
