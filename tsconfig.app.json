@@ -24,7 +24,8 @@
     "paths": {
       "@src/*": ["src/*"],
       "@icon/*": ["src/assets/icon/*"],
-      "@image/*": ["src/assets/image/*"]
+      "@image/*": ["src/assets/image/*"],
+      "@audio/*": ["src/assets/audio/*"]
     }
   },
   "include": ["src"]

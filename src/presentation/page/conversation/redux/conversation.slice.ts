@@ -107,7 +107,7 @@ const conversationSlice = createSlice({
             return {
               ...conv,
               activeStatus: action.payload.activeStatus,
-              lastActiveAt: new Date(),
+              lastActiveAt: new Date().toString(),
             };
           }
           return conv;

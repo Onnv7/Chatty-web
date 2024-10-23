@@ -25,6 +25,10 @@ type PeerContextType = {
   myPeer: Peer | null;
   getMediaStream: (facingMode?: string) => Promise<MediaStream | null>;
   callerSocketId: string;
+  handleToggleCamera: () => Promise<void>;
+  handleEndCall: () => void;
+  setCallingRole: (role: CallRole) => void;
+  callRole: CallRole | null;
 };
 
 const PeerContext = createContext<PeerContextType | null>(null);
@@ -44,8 +48,14 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [myPeer, setMyPeer] = useState<Peer | null>(null);
   const [callerSocketId, setCallerSocketId] = useState<string>('');
   const [calleePeerId, setCalleePeerId] = useState<string>('');
+  const [callerPeerId, setCallerPeerId] = useState<string>('');
   const [callRole, setCallRole] = useState<CallRole | null>(null);
-
+  const [initFirstCalling, setInitFirstCalling] = useState<boolean>(true);
+  const [reconnect, setReconnect] = useState<boolean>(false);
+  const [calling, setCalling] = useState<MediaConnection | null>(null);
+  const setCallingRole = (role: CallRole) => {
+    setCallRole(role);
+  };
   const getMediaStream = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -53,19 +63,33 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     });
     return stream;
   };
-
+  const handleToggleCamera = async () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach((track) => {
+        if (track.enabled) {
+          track.stop();
+        }
+      });
+      setLocalStream(null);
+    } else {
+      const stream = await getMediaStream();
+      console.log('stream bat 4');
+      setLocalStream(stream);
+      setReconnect(true);
+    }
+  };
   const handleCall = useCallback(
     async (conversationId: string) => {
       if (!conversationSocket) {
-        console.log('Conversation socket is not connected');
+        console.error('Conversation socket is not connected');
         return;
       }
       if (!profile) {
-        console.log('Caller profile is not set yet');
+        console.error('Caller profile is not set yet');
         return;
       }
       const stream = await getMediaStream();
-
+      console.log('stream bat 1');
       setLocalStream(stream);
       setCallRole(CallRole.CALLER);
 
@@ -81,7 +105,30 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [profile, userId, conversationSocket],
   );
-
+  const resetState = () => {
+    if (remoteStream) {
+      console.log('tawst remoteStream');
+      remoteStream.getVideoTracks().forEach((track) => {
+        if (track.enabled) {
+          track.stop();
+        }
+      });
+      setRemoteStream(null);
+    }
+    setOngoingCall({
+      isRinging: false,
+      conversation: { id: '', imageUrl: '', name: '' },
+    });
+    if (myPeer) {
+      console.log('tawst myPeer');
+      myPeer.destroy();
+      setMyPeer(null);
+    }
+    setCallRole(null);
+    setCalleePeerId('');
+    setCallerPeerId('');
+    setCallerSocketId('');
+  };
   // CALLEE ANSWER CALL
   const handleJoinCall = async (callerSocketId: string) => {
     const stream = await getMediaStream();
@@ -90,49 +137,112 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     calleePeer.on('open', (id) => {
       if (stream && calleePeer) {
         setMyPeer(calleePeer);
+        console.log('stream bat 2');
         setLocalStream(stream);
         setCallRole(CallRole.CALLEE);
         setCallerSocketId(callerSocketId);
       }
     });
   };
+  const handleEndCall = () => {
+    if (localStream) {
+      console.log('tawst localStream');
+      localStream.getVideoTracks().forEach((track) => {
+        if (track.enabled) {
+          track.stop();
+        }
+      });
+      setLocalStream(null);
+    }
+    if (calling) {
+      calling.close();
+    }
+  };
+  console.log(
+    localStream,
+    remoteStream,
+    ongoingCall,
+    myPeer,
+    callerSocketId,
+    calleePeerId,
+    callerPeerId,
+    callRole,
+    initFirstCalling,
+    reconnect,
+    calling,
+  );
   useEffect(() => {
-    if (myPeer && localStream) {
+    if (myPeer && localStream && initFirstCalling) {
       if (callRole === CallRole.CALLEE) {
-        myPeer.on('call', async (call) => {
+        const onCallCallee = async (call: MediaConnection) => {
           call.answer(localStream!);
-
-          // setMyCall(call);
+          setCallerPeerId(call.peer);
+          setCalling(call);
           call.on('stream', (remoteStream) => {
             setRemoteStream(remoteStream);
           });
-        });
+        };
+        myPeer.on('call', onCallCallee);
         conversationSocket.emit('callee-share-peer-id', {
           calleePeerId: myPeer.id,
           callerSocketId: callerSocketId,
         });
         return () => {
-          myPeer.off('call', async (call) => {
-            call.answer(localStream!);
-            // setMyCall(call);
-            call.on('stream', (remoteStream) => {
-              setRemoteStream(remoteStream);
-            });
-          });
+          calling?.close();
+          myPeer.off('call', onCallCallee);
         };
       } else if (callRole === CallRole.CALLER) {
         const call = myPeer.call(calleePeerId, localStream);
-        // setMyCall(call)
+        setCalling(call);
         call.on('stream', (remoteStream) => {
           setRemoteStream(remoteStream);
         });
+        const onCallCaller = async (call: MediaConnection) => {
+          setCalling(call);
+          call.answer(localStream!);
+          call.on('stream', (remoteStream) => {
+            setRemoteStream(remoteStream);
+          });
+        };
+        myPeer.on('call', onCallCaller);
+
+        return () => {
+          call.close();
+          myPeer.off('call', onCallCaller);
+        };
+      }
+      setInitFirstCalling(false);
+    }
+  }, [myPeer, localStream, initFirstCalling]);
+  useEffect(() => {
+    if (calling) {
+      calling.on('close', () => {
+        console.log('effect end calling');
+        resetState();
+      });
+    }
+  }, [calling]);
+  useEffect(() => {
+    const reconnectPeer = async () => {
+      if (reconnect && myPeer) {
+        const stream = await getMediaStream();
+        console.log('stream bat 3');
+        setLocalStream(stream);
+        const remotePeerId =
+          callRole === CallRole.CALLER ? calleePeerId : callerPeerId;
+        const call = myPeer.call(remotePeerId, stream);
+        setCalling(call);
+        call.on('stream', (remoteStream) => {
+          setRemoteStream(remoteStream);
+        });
+        setReconnect(false);
         return () => {
           call.close();
         };
       }
-    }
-  }, [myPeer, localStream]);
-
+    };
+    reconnectPeer();
+  }, [reconnect]);
   useEffect(() => {
     if (conversationSocket) {
       // callee listening
@@ -174,16 +284,20 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
   return (
     <PeerContext.Provider
       value={{
+        handleEndCall: handleEndCall,
         // peer: peer.current,
         // peerId: peerId,
         callerSocketId: callerSocketId,
         handleJoinCall: handleJoinCall,
         handleCall: handleCall,
+        callRole: callRole,
         localStream: localStream,
         remoteStream: remoteStream,
         ongoingCall: ongoingCall,
         myPeer: myPeer,
         getMediaStream: getMediaStream,
+        setCallingRole: setCallingRole,
+        handleToggleCamera: handleToggleCamera,
       }}
     >
       {children}

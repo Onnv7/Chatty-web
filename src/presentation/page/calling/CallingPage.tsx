@@ -18,11 +18,23 @@ import { ConversationInfoEntity } from '../../../domain/entity/conversation.enti
 import { usePeerContext } from '../../../common/context/peer.context';
 import { CallRole } from '../../../common/constant/enum';
 import { useSocketContext } from '../../../common/context/socket.context';
+import RemoteVideo from './components/RemoteVideo';
+import LocalVideo from './components/LocalVideo';
 
 function CallingPage() {
+  const [videoMode, setVideoMode] = useState(true);
+  const [audioMode, setAudioMode] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { localStream, remoteStream, handleCall, ongoingCall, handleJoinCall } =
-    usePeerContext();
+  const {
+    localStream,
+    remoteStream,
+    handleToggleCamera,
+    handleCall,
+    setCallingRole,
+    handleEndCall,
+    callRole,
+    handleJoinCall,
+  } = usePeerContext();
   const { socket } = useSocketContext();
   const conversationSocket = socket('conversation');
   const conversationId = searchParams.get('id');
@@ -40,10 +52,9 @@ function CallingPage() {
 
   const callerSocketId = window.opener?.sharedData?.callerSocketId ?? null;
 
-  const [callRole, setCallRole] = useState<CallRole | null>(
-    window.opener?.sharedData?.callRole ?? null,
-  );
-
+  useEffect(() => {
+    setCallingRole(window.opener?.sharedData?.callRole ?? null);
+  }, []);
   const [conversationEntity, setConversationEntity] =
     useState<ConversationInfoEntity>();
   const toggleVideo = async () => {
@@ -62,7 +73,6 @@ function CallingPage() {
     if (friendId) {
       conversationApi.callApi(async () => {
         const converId = await getConversationId(Number(friendId), userId!);
-
         if (converId) {
           setSearchParams({ id: converId });
         } else {
@@ -93,6 +103,17 @@ function CallingPage() {
   useEffect(() => {
     if (videoRemoteRef.current && remoteStream) {
       videoRemoteRef.current.srcObject = remoteStream;
+      const remoteVideoTrack = remoteStream.getVideoTracks()[0];
+      if (remoteVideoTrack) {
+        remoteVideoTrack.onmute = () => {
+          console.log('onmute');
+        };
+        remoteVideoTrack.onunmute = () => {
+          console.log('onunmute');
+        };
+
+        videoRemoteRef.current.srcObject = remoteStream;
+      }
     }
     if (videoBlurRef.current && remoteStream) {
       videoBlurRef.current.srcObject = remoteStream;
@@ -100,7 +121,7 @@ function CallingPage() {
     if (videoLocalRef.current && localStream) {
       videoLocalRef.current.srcObject = localStream;
     }
-  }, [remoteStream, localStream]);
+  }, [localStream, remoteStream]);
 
   return (
     <>
@@ -111,8 +132,8 @@ function CallingPage() {
               ref={videoBlurRef}
               autoPlay
               playsInline
-              muted
-              className="fixed z-[40] h-full w-full object-cover blur-lg"
+              className="fixed z-[40] h-full w-full object-cover"
+              style={{ filter: 'blur(10px)' }}
             />
             <video
               ref={videoRemoteRef}
@@ -121,20 +142,22 @@ function CallingPage() {
             ></video>
             <img src={A} alt="" className="z-[10] size-[10rem] rounded-full" />
           </section>
-          <section className="fixed bottom-[4%] right-[4%] z-[50] aspect-video w-[14rem] overflow-hidden rounded-xl bg-emerald-600">
+          {/* <RemoteVideo remoteStream={remoteStream} /> */}
+          <LocalVideo remoteStream={localStream} />
+          {/* <section className="fixed bottom-[4%] right-[4%] z-[50] aspect-video w-[14rem] overflow-hidden rounded-xl bg-emerald-600">
             <video
               ref={videoLocalRef}
               autoPlay
               className="aspect-video w-[14rem] object-fill"
             ></video>
-          </section>
+          </section> */}
           <section className="fade-in-up fixed bottom-[8%] z-[100] h-fit w-full flex-col bg-transparent">
             <span className="flex justify-center space-x-4">
               <img
                 src={CAMERA_ON_ICON}
                 className="h-12 w-12 cursor-pointer rounded-full bg-gray-400 p-2"
                 alt=""
-                onClick={() => handleCall(conversationId!)}
+                onClick={handleToggleCamera}
               />
               <img
                 src={CAMERA_OFF_ICON}
@@ -157,7 +180,7 @@ function CallingPage() {
                 className="h-12 w-12 cursor-pointer rounded-full bg-red-600 p-2"
                 alt=""
                 onClick={() => {
-                  console.log('remote ', remoteStream);
+                  handleEndCall();
                 }}
               />
             </span>

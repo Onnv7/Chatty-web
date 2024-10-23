@@ -225,19 +225,6 @@ export async function openCallingWindow(
 
   if (newWindow) {
     newWindow.focus();
-    // newWindow.onload = () => {
-    //   console.log('🚀 ~ isCaller:', isCaller);
-    //   newWindow.postMessage({ conversationId, isCaller }, '*');
-    // };
-
-    // newWindow.onload = () => {
-    //   console.log('posted');
-    //   newWindow.postMessage(
-    //     { message: 'Hello from parent window', data: 123 },
-    //     '*',
-    //   );
-    // };
-
     newWindow.opener.sharedData = {
       callRole: callRole,
       callerSocketId: callRole === CallRole.CALLEE ? callerSocketId : undefined,

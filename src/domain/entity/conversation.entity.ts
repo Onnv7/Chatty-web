@@ -8,7 +8,7 @@ export type ConversationEntity = {
   name: string;
   senderId: number;
   activeStatus: ActiveStatus;
-  lastActiveAt: Date;
+  lastActiveAt: string;
   friendId?: number;
 };
 

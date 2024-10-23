@@ -29,8 +29,10 @@ import { formatDateWithWeekday } from '../../../../common/util/date.util';
 import { useClickOutside } from '../../../../common/hook/useClickOutside';
 import TextingComponent from '../../../components/TextingComponent';
 import EmojiReactionComponent from '../../../components/EmojiReactionComponent';
+import MESSAGE_AUDIO from '@audio/new_message_audio.wav';
 
 function ConversationChat() {
+  const messageAudio = new Audio(MESSAGE_AUDIO);
   const [searchParams, setSearchParams] = useSearchParams();
   const conversationDispatch = useConversationDispatch();
   const conversationId = searchParams.get('id');
@@ -155,6 +157,7 @@ function ConversationChat() {
 
   useEffect(() => {
     const receiveMessageHandler = async (data: SendNewMessageSocketData) => {
+      messageAudio.play();
       conversationDispatch(
         updateNewConversation({
           conversationId: data.conversationId,

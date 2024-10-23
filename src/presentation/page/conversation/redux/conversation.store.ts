@@ -7,6 +7,7 @@ export const conversationStore = configureStore({
   reducer: {
     conversation: conversationSlice,
   },
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware(),
 });
 
 export const useConversationDispatch: () => typeof conversationStore.dispatch =
