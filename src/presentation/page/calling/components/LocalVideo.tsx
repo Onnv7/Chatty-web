@@ -8,9 +8,9 @@ const LocalVideo: React.FC<LocalVideoProps> = React.memo(({ remoteStream }) => {
   useEffect(() => {
     if (videoRef.current && remoteStream) {
       videoRef.current.srcObject = remoteStream;
+      console.log('render local video');
     }
   }, [remoteStream]);
-  console.log('render local video');
   return (
     <section className="fixed bottom-[4%] right-[4%] z-[50] aspect-video w-[14rem] overflow-hidden rounded-xl bg-emerald-600">
       <video

@@ -8,9 +8,18 @@ import { usePeerContext } from '../../../common/context/peer.context';
 import { MediaConnection } from 'peerjs';
 import { openCallingWindow } from '../../../domain/usecase/conversation.usecase';
 import { CallRole } from '../../../common/constant/enum';
+import { useSocketContext } from '../../../common/context/socket.context';
 
 function CallPopup() {
-  const { ongoingCall, handleJoinCall, callerSocketId } = usePeerContext();
+  const { socket } = useSocketContext();
+  const conversationSocket = socket('conversation');
+  const {
+    ongoingCall,
+    handleJoinCall,
+    handleRejectCall,
+    callerSocketId,
+    resetState,
+  } = usePeerContext();
   const [showPopup, setShowPopup] = useState(ongoingCall?.isRinging);
   const [incomingCallAudio] = useState(new Audio(INCOMING_CALL_AUDIO));
   const [incomingCall, setIncomingCall] = useState<MediaConnection | null>(
@@ -33,16 +42,19 @@ function CallPopup() {
   const handleCancel = () => {
     if (incomingCall) incomingCall.close();
     if (incomingCallAudio) {
-      console.log('pausse');
       incomingCallAudio.pause();
       incomingCallAudio.currentTime = 0;
     }
     setShowPopup(false);
+    handleRejectCall();
   };
   useEffect(() => {
     if (ongoingCall?.isRinging) {
       incomingCallAudio.play();
       incomingCallAudio.loop = true;
+      conversationSocket.on('caller-cancel-call', () => {
+        resetState();
+      });
     } else {
       incomingCallAudio.pause();
       incomingCallAudio.currentTime = 0;
@@ -52,7 +64,7 @@ function CallPopup() {
       incomingCallAudio.pause();
       incomingCallAudio.currentTime = 0;
     };
-  }, [ongoingCall?.isRinging]);
+  }, [ongoingCall]);
   return (
     <>
       {ongoingCall && showPopup && (
@@ -75,13 +87,13 @@ function CallPopup() {
               </p>
               <div className="flex gap-8">
                 <div
-                  className="flex size-[3rem] items-center justify-center rounded-full bg-red-500"
+                  className="flex size-[3rem] cursor-pointer items-center justify-center rounded-full bg-red-500"
                   onClick={handleCancel}
                 >
                   <img src={REJECT_CALL_ICON} alt="" className="size-[2rem]" />
                 </div>
                 <div
-                  className="flex size-[3rem] items-center justify-center rounded-full bg-green-500"
+                  className="flex size-[3rem] cursor-pointer items-center justify-center rounded-full bg-green-500"
                   onClick={handleAccept}
                 >
                   <img

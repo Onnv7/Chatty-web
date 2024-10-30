@@ -28,6 +28,8 @@ function HeadConversationComponent({
   name,
 }: HeadConversationComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { socket } = useSocketContext();
+  const conversationSocket = socket('conversation');
   const conversationId = searchParams.get('id');
   const friendIdParam =
     searchParams.get('friend') ?? Number(searchParams.get('friend'));
@@ -41,7 +43,11 @@ function HeadConversationComponent({
     name: name ?? '',
   });
   async function handleCalling() {
-    handleCall(conversationId!);
+    // handleCall(conversationId!);
+    console.log(conversationSocket.id, conversationSocket.connected);
+    conversationSocket.on('receive-phone-call', () => {
+      console.log('co cuoc gai');
+    });
   }
 
   async function handleVideoCall() {

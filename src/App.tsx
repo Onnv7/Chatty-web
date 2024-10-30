@@ -19,6 +19,7 @@ import { getUserIdLocal } from './domain/usecase/app.usecase';
 import VideoPage from './presentation/page/viceo/VideoPage';
 import { PeerProvider } from './common/context/peer.context';
 import { SocketProvider } from './common/context/socket.context';
+import PhonePage from './presentation/page/phone/PhonePage';
 
 const router = createBrowserRouter(
   createRoutesFromElements([
@@ -85,6 +86,7 @@ function App() {
             element={AppRouter.calling.page}
           />
           <Route path="/video" element={<VideoPage />} />
+          <Route path="/phone" element={<PhonePage />} />
         </Route>
         <Route path={AppRouter.login.route} element={AppRouter.login.page} />
         <Route

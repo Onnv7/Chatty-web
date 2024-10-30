@@ -9,3 +9,7 @@ export type IncomingCallSocketEntity = {
 };
 
 export type ReceiveCalleePeerIdSocketEntity = {};
+
+export type CalleeRejectCallSocketEntity = {
+  calleeId: string;
+};

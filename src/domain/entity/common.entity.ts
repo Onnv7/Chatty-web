@@ -28,4 +28,5 @@ export type OngoingCallEntity = {
     imageUrl: string;
     name: string;
   };
+  connected: boolean;
 };

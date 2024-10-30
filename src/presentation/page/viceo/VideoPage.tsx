@@ -10,12 +10,13 @@ function VideoPage() {
   const [calleeId, setCalleeId] = useState<string>('');
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [peer, setPeer] = useState<Peer | null>(null);
+  const [peerId, setPeerId] = useState<string>('');
   // const { myPeer: peer, getMediaStream } = usePeerContext();
   const { socket } = useSocketContext();
   const conversationSocket = socket('conversation');
   async function handleCalling() {
     navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
+      .getUserMedia({ video: false, audio: true })
       .then((stream1) => {
         setLocalStream(stream1);
         const call = peer?.call(calleeId, stream1);
@@ -23,6 +24,11 @@ function VideoPage() {
           // console.log('on call');
         }
         call?.on('stream', (remoteStream) => {
+          console.log(
+            'callee answered',
+            remoteStream.getVideoTracks().length,
+            remoteStream.getTracks().length,
+          );
           setRemoteStream(remoteStream);
         });
       });
@@ -31,6 +37,13 @@ function VideoPage() {
   useEffect(() => {
     if (conversationSocket.id) {
       const peer = new Peer(conversationSocket.id!);
+      peer.on('open', (id) => {
+        console.log('open id');
+        setPeerId(id);
+      });
+      peer.on('error', (err) => {
+        console.log('error ', err);
+      });
       setPeer(peer);
     }
   }, [conversationSocket.id]);
@@ -38,6 +51,7 @@ function VideoPage() {
     if (peer) {
       peer.on('call', async (call) => {
         const stram = await getMediaStream();
+        console.log('co cuoc goi');
         setLocalStream(stram);
         call.answer(stram!);
         call.on('stream', (remoteStream) => {
@@ -74,7 +88,7 @@ function VideoPage() {
   }, [remoteStream]);
   return (
     <div>
-      <h1>My peer: {peer?.id}</h1>
+      <h1>My peer: {peerId}</h1>
       <input
         type="text"
         placeholder="id"

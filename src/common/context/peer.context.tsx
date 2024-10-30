@@ -1,5 +1,6 @@
 // SocketContext.js
 import Peer, { MediaConnection } from 'peerjs';
+import DO_CALLING_AUDIO from '@audio/do_calling_audio.mp3';
 import React, {
   createContext,
   useCallback,
@@ -12,7 +13,10 @@ import { io, Socket } from 'socket.io-client';
 import { useSocketContext } from './socket.context';
 import { OngoingCallEntity } from '../../domain/entity/common.entity';
 import { useAuthContext } from './auth.context';
-import { IncomingCallSocketEntity } from '../../domain/entity/socket.entiry';
+import {
+  CalleeRejectCallSocketEntity,
+  IncomingCallSocketEntity,
+} from '../../domain/entity/socket.entiry';
 import { set } from 'react-hook-form';
 import { CallRole } from '../constant/enum';
 
@@ -21,14 +25,18 @@ type PeerContextType = {
   remoteStream: MediaStream | null;
   ongoingCall: OngoingCallEntity | null;
   handleCall: (conversationId: string) => Promise<void>;
+  handleRejectCall: () => void;
   handleJoinCall: (callerSocketId: string) => Promise<void>;
   myPeer: Peer | null;
-  getMediaStream: (facingMode?: string) => Promise<MediaStream | null>;
+  getMediaStream: (video?: boolean) => Promise<MediaStream | null>;
   callerSocketId: string;
   handleToggleCamera: () => Promise<void>;
+  handleToggleMic: () => void;
   handleEndCall: () => void;
   setCallingRole: (role: CallRole) => void;
+  resetState: () => void;
   callRole: CallRole | null;
+  reconnect: boolean | undefined;
 };
 
 const PeerContext = createContext<PeerContextType | null>(null);
@@ -36,6 +44,9 @@ const PeerContext = createContext<PeerContextType | null>(null);
 export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const [doCallingAudio, setDoCallingAudio] = useState(
+    new Audio(DO_CALLING_AUDIO),
+  );
   const { userId, profile } = useAuthContext();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -44,6 +55,7 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [ongoingCall, setOngoingCall] = useState<OngoingCallEntity>({
     isRinging: false,
     conversation: { id: '', imageUrl: '', name: '' },
+    connected: false,
   });
   const [myPeer, setMyPeer] = useState<Peer | null>(null);
   const [callerSocketId, setCallerSocketId] = useState<string>('');
@@ -51,30 +63,37 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [callerPeerId, setCallerPeerId] = useState<string>('');
   const [callRole, setCallRole] = useState<CallRole | null>(null);
   const [initFirstCalling, setInitFirstCalling] = useState<boolean>(true);
-  const [reconnect, setReconnect] = useState<boolean>(false);
+  const [reconnect, setReconnect] = useState<boolean>();
   const [calling, setCalling] = useState<MediaConnection | null>(null);
+  const [callingClose, setCallingClose] = useState<boolean>(false);
+  const [cameraOn, setCameraOn] = useState<boolean>(false);
+  const [audioOn, setAudioOn] = useState<boolean>(false);
+  const [acceptCall, setAcceptCall] = useState<boolean>();
   const setCallingRole = (role: CallRole) => {
     setCallRole(role);
   };
-  const getMediaStream = async () => {
+  const handleToggleMic = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      audioTrack.enabled = !audioTrack.enabled;
+    }
+  };
+  const getMediaStream = async (video?: boolean) => {
+    console.log('bat video', video);
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
-      video: true,
+      video: video ?? true,
     });
     return stream;
   };
   const handleToggleCamera = async () => {
     if (localStream) {
-      localStream.getVideoTracks().forEach((track) => {
-        if (track.enabled) {
-          track.stop();
-        }
+      localStream.getVideoTracks().map((track) => {
+        track.stop();
       });
       setLocalStream(null);
+      console.log('tat cam');
     } else {
-      const stream = await getMediaStream();
-      console.log('stream bat 4');
-      setLocalStream(stream);
       setReconnect(true);
     }
   };
@@ -88,8 +107,10 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error('Caller profile is not set yet');
         return;
       }
-      const stream = await getMediaStream();
-      console.log('stream bat 1');
+
+      const stream = await getMediaStream(false);
+      doCallingAudio.play();
+      doCallingAudio.loop = true;
       setLocalStream(stream);
       setCallRole(CallRole.CALLER);
 
@@ -105,10 +126,26 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [profile, userId, conversationSocket],
   );
+  const handleRejectCall = useCallback(() => {
+    if (conversationSocket) {
+      conversationSocket.emit('callee-reject-call-caller', {
+        callerSocketId: callerSocketId,
+        calleeId: userId,
+      });
+    }
+  }, [callerSocketId, callerPeerId, conversationSocket]);
   const resetState = () => {
+    console.log('resteing calling');
     if (remoteStream) {
-      console.log('tawst remoteStream');
       remoteStream.getVideoTracks().forEach((track) => {
+        if (track.enabled) {
+          track.stop();
+        }
+      });
+      setRemoteStream(null);
+    }
+    if (localStream) {
+      localStream.getVideoTracks().forEach((track) => {
         if (track.enabled) {
           track.stop();
         }
@@ -118,9 +155,9 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     setOngoingCall({
       isRinging: false,
       conversation: { id: '', imageUrl: '', name: '' },
+      connected: false,
     });
     if (myPeer) {
-      console.log('tawst myPeer');
       myPeer.destroy();
       setMyPeer(null);
     }
@@ -128,6 +165,10 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     setCalleePeerId('');
     setCallerPeerId('');
     setCallerSocketId('');
+    if (doCallingAudio.played) {
+      doCallingAudio.pause();
+      doCallingAudio.currentTime = 0;
+    }
   };
   // CALLEE ANSWER CALL
   const handleJoinCall = async (callerSocketId: string) => {
@@ -137,7 +178,6 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     calleePeer.on('open', (id) => {
       if (stream && calleePeer) {
         setMyPeer(calleePeer);
-        console.log('stream bat 2');
         setLocalStream(stream);
         setCallRole(CallRole.CALLEE);
         setCallerSocketId(callerSocketId);
@@ -146,7 +186,6 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
   };
   const handleEndCall = () => {
     if (localStream) {
-      console.log('tawst localStream');
       localStream.getVideoTracks().forEach((track) => {
         if (track.enabled) {
           track.stop();
@@ -158,28 +197,21 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
       calling.close();
     }
   };
-  console.log(
-    localStream,
-    remoteStream,
-    ongoingCall,
-    myPeer,
-    callerSocketId,
-    calleePeerId,
-    callerPeerId,
-    callRole,
-    initFirstCalling,
-    reconnect,
-    calling,
-  );
   useEffect(() => {
-    if (myPeer && localStream && initFirstCalling) {
+    console.log('🚀 ~ useEffect ~ initFirstCalling:', initFirstCalling);
+    if (myPeer && localStream) {
+      calling?.peerConnection.getSenders().forEach((sender) => {
+        sender.replaceTrack(localStream!.getVideoTracks()[0]);
+      });
       if (callRole === CallRole.CALLEE) {
         const onCallCallee = async (call: MediaConnection) => {
           call.answer(localStream!);
           setCallerPeerId(call.peer);
           setCalling(call);
           call.on('stream', (remoteStream) => {
+            console.log('nhan duoc stream', remoteStream);
             setRemoteStream(remoteStream);
+            setOngoingCall((prev) => ({ ...prev, connected: true }));
           });
         };
         myPeer.on('call', onCallCallee);
@@ -195,7 +227,13 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
         const call = myPeer.call(calleePeerId, localStream);
         setCalling(call);
         call.on('stream', (remoteStream) => {
+          console.log('caller nhan stream', remoteStream.getVideoTracks());
+          if (doCallingAudio.played) {
+            doCallingAudio.pause();
+            doCallingAudio.currentTime = 0;
+          }
           setRemoteStream(remoteStream);
+          setOngoingCall((prev) => ({ ...prev, connected: true }));
         });
         const onCallCaller = async (call: MediaConnection) => {
           setCalling(call);
@@ -211,31 +249,36 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
           myPeer.off('call', onCallCaller);
         };
       }
-      setInitFirstCalling(false);
     }
   }, [myPeer, localStream, initFirstCalling]);
+
   useEffect(() => {
-    if (calling) {
-      calling.on('close', () => {
-        console.log('effect end calling');
+    console.log('set lai toan bo state, reconnect = ', callingClose, reconnect);
+    if (callingClose) {
+      console.log('oki');
+      if (reconnect === false) {
         resetState();
-      });
+      }
+      setCallingClose(false);
     }
-  }, [calling]);
+  }, [callingClose, reconnect]);
+
   useEffect(() => {
     const reconnectPeer = async () => {
       if (reconnect && myPeer) {
+        console.log('reconnecting');
         const stream = await getMediaStream();
-        console.log('stream bat 3');
         setLocalStream(stream);
         const remotePeerId =
           callRole === CallRole.CALLER ? calleePeerId : callerPeerId;
+
         const call = myPeer.call(remotePeerId, stream);
         setCalling(call);
+
         call.on('stream', (remoteStream) => {
           setRemoteStream(remoteStream);
         });
-        setReconnect(false);
+        setReconnect(undefined);
         return () => {
           call.close();
         };
@@ -243,12 +286,35 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     reconnectPeer();
   }, [reconnect]);
+
   useEffect(() => {
-    if (conversationSocket) {
+    if (calling) {
+      if (reconnect === true) {
+        console.log('reconnect1 === true');
+      } else if (reconnect === false) {
+        console.log('reconnect1 === false');
+      } else if (reconnect === undefined) {
+        console.log('reconnect1 === undefined');
+      }
+      calling.on('close', () => {
+        console.log('listen calling close');
+        setCallingClose(true);
+      });
+      return () => {
+        calling.off('close', () => {
+          setCallingClose(true);
+        });
+      };
+    }
+  }, [calling, reconnect]);
+
+  useEffect(() => {
+    if (conversationSocket.connected) {
       // callee listening
       conversationSocket.on(
         'receive-phone-call',
         async (data: IncomingCallSocketEntity) => {
+          console.log('cuoc goi toi', ongoingCall);
           setOngoingCall({
             isRinging: true,
             conversation: {
@@ -256,6 +322,7 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
               imageUrl: data.conversation.imageUrl,
               name: data.conversation.name,
             },
+            connected: false,
           });
           setCallRole(CallRole.CALLEE);
           setCallerSocketId(data.conversation.socketId);
@@ -274,9 +341,21 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         },
       );
+      conversationSocket.on(
+        'callee-reject-call',
+        async (data: CalleeRejectCallSocketEntity) => {
+          doCallingAudio.pause();
+          doCallingAudio.currentTime = 0;
+          console.log('resetState() 3');
+          resetState();
+        },
+      );
       return () => {
-        conversationSocket.off('receive-phone-call');
+        conversationSocket.off('receive-phone-call', () => {
+          console.log('off receive-phone-call');
+        });
         conversationSocket.off('receive-callee-peer-id');
+        conversationSocket.off('callee-reject-call');
       };
     }
   }, [conversationSocket.id]);
@@ -287,9 +366,12 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
         handleEndCall: handleEndCall,
         // peer: peer.current,
         // peerId: peerId,
+        reconnect: reconnect,
         callerSocketId: callerSocketId,
         handleJoinCall: handleJoinCall,
+        handleRejectCall: handleRejectCall,
         handleCall: handleCall,
+        resetState: resetState,
         callRole: callRole,
         localStream: localStream,
         remoteStream: remoteStream,
@@ -298,6 +380,7 @@ export const PeerProvider: React.FC<{ children: React.ReactNode }> = ({
         getMediaStream: getMediaStream,
         setCallingRole: setCallingRole,
         handleToggleCamera: handleToggleCamera,
+        handleToggleMic: handleToggleMic,
       }}
     >
       {children}

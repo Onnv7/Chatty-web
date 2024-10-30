@@ -6,8 +6,10 @@ import MIC_OFF_ICON from '@icon/mic_off_icon.svg';
 import CAMERA_ON_ICON from '@icon/camera_on_icon.svg';
 import CAMERA_OFF_ICON from '@icon/camera_off_icon.svg';
 import PHONE_DOWN_ICON from '@icon/phone_down_icon.svg';
+import X_ICON from '@icon/x_white_icon.svg';
+import AUDIO_CALL_ICON from '@icon/phone_up_icon.svg';
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallApi } from '../../../common/hook/useCallApi';
 import {
   getConversation,
@@ -20,21 +22,27 @@ import { CallRole } from '../../../common/constant/enum';
 import { useSocketContext } from '../../../common/context/socket.context';
 import RemoteVideo from './components/RemoteVideo';
 import LocalVideo from './components/LocalVideo';
+import { AppRouter } from '../../../common/config/router.config';
 
 function CallingPage() {
   const [videoMode, setVideoMode] = useState(true);
   const [audioMode, setAudioMode] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const {
+    handleToggleMic,
     localStream,
     remoteStream,
     handleToggleCamera,
     handleCall,
     setCallingRole,
+    ongoingCall,
     handleEndCall,
     callRole,
+    reconnect,
+    resetState,
     handleJoinCall,
   } = usePeerContext();
+  const navigate = useNavigate();
   const { socket } = useSocketContext();
   const conversationSocket = socket('conversation');
   const conversationId = searchParams.get('id');
@@ -44,10 +52,8 @@ function CallingPage() {
   const friendId = searchParams.get('friend');
   const conversationApi = useCallApi();
 
-  const [isVideoOn, setIsVideoOn] = useState(true);
-
   const videoRemoteRef = useRef<HTMLVideoElement>(null);
-  const videoLocalRef = useRef<HTMLVideoElement>(null);
+  // const videoLocalRef = useRef<HTMLVideoElement>(null);
   const videoBlurRef = useRef<HTMLVideoElement>(null);
 
   const callerSocketId = window.opener?.sharedData?.callerSocketId ?? null;
@@ -55,19 +61,23 @@ function CallingPage() {
   useEffect(() => {
     setCallingRole(window.opener?.sharedData?.callRole ?? null);
   }, []);
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (callRole === CallRole.CALLER) {
+        conversationSocket.emit('caller-cancel-call-callee', {
+          conversationId: conversationId,
+          callerId: userId,
+        });
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [callRole]);
   const [conversationEntity, setConversationEntity] =
     useState<ConversationInfoEntity>();
-  const toggleVideo = async () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach((track) => {
-        if (track.enabled) {
-          track.stop();
-        }
-      });
-      setIsVideoOn(!isVideoOn);
-    } else {
-    }
-  };
 
   useEffect(() => {
     if (friendId) {
@@ -102,9 +112,11 @@ function CallingPage() {
 
   useEffect(() => {
     if (videoRemoteRef.current && remoteStream) {
+      console.log('r3ender remote video', remoteStream);
       videoRemoteRef.current.srcObject = remoteStream;
       const remoteVideoTrack = remoteStream.getVideoTracks()[0];
       if (remoteVideoTrack) {
+        console.log('render suces');
         remoteVideoTrack.onmute = () => {
           console.log('onmute');
         };
@@ -118,9 +130,9 @@ function CallingPage() {
     if (videoBlurRef.current && remoteStream) {
       videoBlurRef.current.srcObject = remoteStream;
     }
-    if (videoLocalRef.current && localStream) {
-      videoLocalRef.current.srcObject = localStream;
-    }
+    // if (videoLocalRef.current && localStream) {
+    //   videoLocalRef.current.srcObject = localStream;
+    // }
   }, [localStream, remoteStream]);
 
   return (
@@ -153,34 +165,63 @@ function CallingPage() {
           </section> */}
           <section className="fade-in-up fixed bottom-[8%] z-[100] h-fit w-full flex-col bg-transparent">
             <span className="flex justify-center space-x-4">
-              <img
-                src={CAMERA_ON_ICON}
-                className="h-12 w-12 cursor-pointer rounded-full bg-gray-400 p-2"
-                alt=""
-                onClick={handleToggleCamera}
-              />
-              <img
-                src={CAMERA_OFF_ICON}
-                className="h-12 w-12 cursor-pointer rounded-full bg-white p-2"
-                alt=""
-                onClick={toggleVideo}
-              />
-              <img
-                src={MIC_ON_ICON}
-                className="h-12 w-12 cursor-pointer rounded-full bg-gray-400 p-2"
-                alt=""
-              />
-              <img
-                src={MIC_OFF_ICON}
-                className="h-12 w-12 cursor-pointer rounded-full bg-white p-2"
-                alt=""
-              />
+              {videoMode ? (
+                <img
+                  src={CAMERA_ON_ICON}
+                  className="h-12 w-12 cursor-pointer rounded-full bg-gray-400 p-2"
+                  alt=""
+                  onClick={async () => {
+                    await handleToggleCamera();
+                    setVideoMode(!videoMode);
+                  }}
+                />
+              ) : (
+                <img
+                  src={CAMERA_OFF_ICON}
+                  className="h-12 w-12 cursor-pointer rounded-full bg-white p-2"
+                  alt=""
+                  onClick={async () => {
+                    await handleToggleCamera();
+                    setVideoMode(!videoMode);
+                  }}
+                />
+              )}
+              {audioMode ? (
+                <img
+                  src={MIC_ON_ICON}
+                  className="h-12 w-12 cursor-pointer rounded-full bg-gray-400 p-2"
+                  alt=""
+                  onClick={() => {
+                    handleToggleMic();
+                    setAudioMode(!audioMode);
+                  }}
+                />
+              ) : (
+                <img
+                  src={MIC_OFF_ICON}
+                  className="h-12 w-12 cursor-pointer rounded-full bg-white p-2"
+                  alt=""
+                  onClick={() => {
+                    handleToggleMic();
+                    setAudioMode(!audioMode);
+                  }}
+                />
+              )}
               <img
                 src={PHONE_DOWN_ICON}
                 className="h-12 w-12 cursor-pointer rounded-full bg-red-600 p-2"
                 alt=""
                 onClick={() => {
-                  handleEndCall();
+                  if (ongoingCall?.connected) handleEndCall();
+                  else {
+                    if (callRole === CallRole.CALLER) {
+                      conversationSocket.emit('caller-cancel-call-callee', {
+                        conversationId: conversationId,
+                        callerId: userId,
+                      });
+                    }
+                    resetState();
+                  }
                 }}
               />
             </span>
@@ -203,21 +244,36 @@ function CallingPage() {
             <h3 className="text-16 font-5 text-white">Nguyen Van An</h3>
           </div>
           <div className="flex gap-6 p-8">
-            <span className="flex flex-col items-center justify-center gap-2">
+            <span className="flex cursor-pointer flex-col items-center justify-center gap-2">
               <img
-                src={CAMERA_ON_ICON}
+                src={AUDIO_CALL_ICON}
                 alt=""
                 className="size-[4rem] rounded-full bg-green-500 p-[1rem]"
+                onClick={() => {}}
               />
-              <p className="font-5 text-gray-400">Gọi video</p>
+              <p className="font-5 text-gray-400">Audio Call</p>
             </span>
-            <span className="flex flex-col items-center justify-center gap-2">
+            <span className="flex cursor-pointer flex-col items-center justify-center gap-2">
               <img
                 src={CAMERA_ON_ICON}
                 alt=""
                 className="size-[4rem] rounded-full bg-green-500 p-[1rem]"
+                onClick={() => {
+                  if (conversationId) handleCall(conversationId);
+                }}
               />
-              <p className="font-5 text-gray-400">Gọi video</p>
+              <p className="font-5 text-gray-400">Video Call</p>
+            </span>
+            <span className="flex cursor-pointer flex-col items-center justify-center gap-2">
+              <img
+                src={X_ICON}
+                alt=""
+                className="size-[4rem] rounded-full bg-gray-500 p-[1rem]"
+                onClick={() => {
+                  navigate(AppRouter.conversation.route);
+                }}
+              />
+              <p className="font-5 text-gray-400">Close</p>
             </span>
           </div>
         </section>
